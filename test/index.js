@@ -1,12 +1,11 @@
-/**
- * Created by dob on 05.05.14.
- */
-var assert = require('assert'),
-  mongolastic = require('../'),
-  should = require('should'),
-  mongoose = require('mongoose');
+"use strict";
 
-describe('mongolastic', function() {
+var assert = require('assert');
+var should = require('should');
+var mongoose = require('mongoose');
+var mongoolastic = require('../');
+
+describe('mongoolastic', function() {
   //mongoose.set('debug', true);
   var cat;
   var CatSchema;
@@ -20,14 +19,14 @@ describe('mongolastic', function() {
   var settingsTest;
 
   before(function() {
-    mongoose.connect('mongodb://localhost/mongolastic');
+    mongoose.connect('mongodb://localhost/mongoolastic');
 
     CostumeSchema = mongoose.Schema({
       name: {type: String},
       color: {type: String},
       integer: {type: Number, elastic: {mapping: {type: 'integer'}}}
     });
-    CostumeSchema.plugin(mongolastic.plugin, {modelName: 'costume'});
+    CostumeSchema.plugin(mongoolastic.plugin, {modelName: 'costume'});
     costume = mongoose.model('costume', CostumeSchema);
 
     CatSchema = mongoose.Schema({
@@ -42,7 +41,7 @@ describe('mongolastic', function() {
         }
       }
     });
-    CatSchema.plugin(mongolastic.plugin, {modelName: 'cat'});
+    CatSchema.plugin(mongoolastic.plugin, {modelName: 'cat'});
     cat = mongoose.model('cat', CatSchema);
 
     cat.elastic = {
@@ -56,34 +55,34 @@ describe('mongolastic', function() {
       date: {type: Date, default: Date.now},
       costume: {type: mongoose.Schema.ObjectId, ref: 'costume'}
     });
-    DogSchema.plugin(mongolastic.plugin, {modelName: 'dog'});
+    DogSchema.plugin(mongoolastic.plugin, {modelName: 'dog'});
     dog = mongoose.model('dog', DogSchema);
 
     FailSchema = mongoose.Schema({
       name: String,
       keyword: {type: String, required: true}
     });
-    FailSchema.plugin(mongolastic.plugin, {modelName: 'fail'});
+    FailSchema.plugin(mongoolastic.plugin, {modelName: 'fail'});
     myFail = mongoose.model('fail', FailSchema);
 
     // Settings test
     SettingsTestSchema = mongoose.Schema({
       name: String
     });
-    SettingsTestSchema.plugin(mongolastic.plugin, {modelName: 'settingsTest'});
+    SettingsTestSchema.plugin(mongoolastic.plugin, {modelName: 'settingsTest'});
     settingsTest = mongoose.model('settingsTest', SettingsTestSchema);
 
   });
 
-  describe('mongolastic', function() {
+  describe('mongoolastic', function() {
     it('should be a object', function() {
-      assert('object' === typeof mongolastic);
+      assert('object' === typeof mongoolastic);
     });
   });
 
   describe('create connection', function() {
     it('should create a connection', function(done) {
-      mongolastic.connect('mongolastic', {
+      mongoolastic.connect('mongoolastic', {
         host: 'localhost:9200',
         sniffOnStart: true
       }, function(err, conn) {
@@ -94,7 +93,7 @@ describe('mongolastic', function() {
     });
 
     it('should create the mapping for the cat model', function(done) {
-      mongolastic.registerModel(cat, function(err, result) {
+      mongoolastic.registerModel(cat, function(err, result) {
         should.not.exist(err);
         result.should.be.a.Function();
         done();
@@ -102,7 +101,7 @@ describe('mongolastic', function() {
     });
 
     it('should create the mapping for the dog model', function(done) {
-      mongolastic.registerModel(dog, function(err, result) {
+      mongoolastic.registerModel(dog, function(err, result) {
         should.not.exist(err);
         result.should.be.a.Function();
         done();
@@ -110,7 +109,7 @@ describe('mongolastic', function() {
     });
 
     it('should create the mapping for the costume model', function(done) {
-      mongolastic.registerModel(costume, function(err, result) {
+      mongoolastic.registerModel(costume, function(err, result) {
         should.not.exist(err);
         result.should.be.a.Function();
         done();
@@ -118,7 +117,7 @@ describe('mongolastic', function() {
     });
 
     it('should create the mapping for the myFail model', function(done) {
-      mongolastic.registerModel(myFail, function(err, result) {
+      mongoolastic.registerModel(myFail, function(err, result) {
         should.not.exist(err);
         result.should.be.a.Function();
         done();
@@ -126,12 +125,12 @@ describe('mongolastic', function() {
     });
 
     it('should return the mappings for the cat model', function(done) {
-      mongolastic.indices.getMapping(cat.modelName, function(err, response, status) {
+      mongoolastic.indices.getMapping(cat.modelName, function(err, response, status) {
         should.not.exist(err);
         assert(status === 200);
-        response['mongolastic-cat'].should.be.an.Object();
-        response['mongolastic-cat'].mappings.should.be.an.Object();
-        response['mongolastic-cat'].mappings.cat.should.be.an.Object();
+        response['mongoolastic-cat'].should.be.an.Object();
+        response['mongoolastic-cat'].mappings.should.be.an.Object();
+        response['mongoolastic-cat'].mappings.cat.should.be.an.Object();
         done();
       });
     });
@@ -153,7 +152,7 @@ describe('mongolastic', function() {
         }
       };
 
-      mongolastic.registerModel(settingsTest, options, function(err, result) {
+      mongoolastic.registerModel(settingsTest, options, function(err, result) {
         should.not.exist(err);
         result.should.be.a.Function();
         done();
@@ -161,27 +160,27 @@ describe('mongolastic', function() {
     });
 
     it('should return the custom index settings for the settingsTest model', function(done) {
-      mongolastic.indices.getSettings(settingsTest.modelName, function(err, response, status) {
+      mongoolastic.indices.getSettings(settingsTest.modelName, function(err, response, status) {
         should.not.exist(err);
         assert(status === 200);
-        response['mongolastic-settingstest'].should.be.an.Object();
-        response['mongolastic-settingstest'].settings.should.be.an.Object();
-        response['mongolastic-settingstest'].settings.index.should.be.an.Object();
-        response['mongolastic-settingstest'].settings.index['uuid'].should.be.a.String();
-        response['mongolastic-settingstest'].settings.index['analysis'].should.be.an.Object();
+        response['mongoolastic-settingstest'].should.be.an.Object();
+        response['mongoolastic-settingstest'].settings.should.be.an.Object();
+        response['mongoolastic-settingstest'].settings.index.should.be.an.Object();
+        response['mongoolastic-settingstest'].settings.index['uuid'].should.be.a.String();
+        response['mongoolastic-settingstest'].settings.index['analysis'].should.be.an.Object();
         done();
       });
     });
 
     it('should return default index settings for the cat model', function(done) {
-      mongolastic.indices.getSettings(cat.modelName, function(err, response, status) {
+      mongoolastic.indices.getSettings(cat.modelName, function(err, response, status) {
         should.not.exist(err);
         assert(status === 200);
-        response['mongolastic-cat'].should.be.an.Object();
-        response['mongolastic-cat'].settings.should.be.an.Object();
-        response['mongolastic-cat'].settings.index.should.be.an.Object();
-        response['mongolastic-cat'].settings.index['uuid'].should.be.a.String();
-        response['mongolastic-cat'].settings.index.should.not.have.property('analysis');
+        response['mongoolastic-cat'].should.be.an.Object();
+        response['mongoolastic-cat'].settings.should.be.an.Object();
+        response['mongoolastic-cat'].settings.index.should.be.an.Object();
+        response['mongoolastic-cat'].settings.index['uuid'].should.be.a.String();
+        response['mongoolastic-cat'].settings.index.should.not.have.property('analysis');
         done();
       });
     });
@@ -247,7 +246,7 @@ describe('mongolastic', function() {
     });
 
     it('should delete from index', function(done) {
-      mongolastic.delete('cat', kitty.id, function(err, result) {
+      mongoolastic.delete('cat', kitty.id, function(err, result) {
         should.not.exist(err);
         result.should.be.an.Object();
         done();
@@ -255,7 +254,7 @@ describe('mongolastic', function() {
     });
 
     it('should return an error when trying to delete and id is not a string', function(done) {
-      mongolastic.delete('cat', kitty._id, function(err, result) {
+      mongoolastic.delete('cat', kitty._id, function(err, result) {
         should.exist(err);
         err.should.be.an.Error();
         should.equal(null, result);
@@ -264,7 +263,7 @@ describe('mongolastic', function() {
     });
 
     it('should reindex mongoose object', function(done) {
-      mongolastic.index('cat', kitty, function(err, result) {
+      mongoolastic.index('cat', kitty, function(err, result) {
         should.not.exist(err);
         result.should.be.an.Object();
       });
@@ -357,24 +356,24 @@ describe('mongolastic', function() {
     });
 
     it('should return the mappings for the cat model', function(done) {
-      mongolastic.indices.getMapping(cat.modelName, function(err, response, status) {
+      mongoolastic.indices.getMapping(cat.modelName, function(err, response, status) {
         should.not.exist(err);
         assert(status === 200);
-        response['mongolastic-cat'].should.be.an.Object();
-        response['mongolastic-cat'].mappings.should.be.an.Object();
-        response['mongolastic-cat'].mappings.cat.should.be.an.Object();
-        response['mongolastic-cat'].mappings.cat.properties.should.be.an.Object();
-        response['mongolastic-cat'].mappings.cat.properties.test.should.be.an.Object();
-        response['mongolastic-cat'].mappings.cat.properties.test.properties.should.be.an.Object();
-        response['mongolastic-cat'].mappings.cat.properties.test.properties.deep.should.be.an.Object();
-        response['mongolastic-cat'].mappings.cat.properties.test.properties.deep.properties.should.be.an.Object();
+        response['mongoolastic-cat'].should.be.an.Object();
+        response['mongoolastic-cat'].mappings.should.be.an.Object();
+        response['mongoolastic-cat'].mappings.cat.should.be.an.Object();
+        response['mongoolastic-cat'].mappings.cat.properties.should.be.an.Object();
+        response['mongoolastic-cat'].mappings.cat.properties.test.should.be.an.Object();
+        response['mongoolastic-cat'].mappings.cat.properties.test.properties.should.be.an.Object();
+        response['mongoolastic-cat'].mappings.cat.properties.test.properties.deep.should.be.an.Object();
+        response['mongoolastic-cat'].mappings.cat.properties.test.properties.deep.properties.should.be.an.Object();
         done();
       });
     });
 
     it('should return the correct prefix', function(done) {
-      assert.equal(mongolastic.getIndexName('model'), 'mongolastic-model');
-      assert.equal(mongolastic.getIndexName('mongolastic-model'), 'mongolastic-model');
+      assert.equal(mongoolastic.getIndexName('model'), 'mongoolastic-model');
+      assert.equal(mongoolastic.getIndexName('mongoolastic-model'), 'mongoolastic-model');
       done();
     });
 
@@ -407,7 +406,7 @@ describe('mongolastic', function() {
 
   after(function(done) {
     mongoose.connection.db.dropDatabase(function() {
-      mongolastic.deleteIndex('*', function() {
+      mongoolastic.deleteIndex('*', function() {
         done();
       });
     });
