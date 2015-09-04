@@ -10,7 +10,7 @@
   "repository": {
     "url": "https://github.com/moooji/mongoolastic"
   },
-  "version": "0.10.0",
+  "version": "0.10.1",
   "dependencies": {
     "bluebird": "^2.9.34",
     "elasticsearch": "^8.0.1",
