@@ -1,0 +1,41 @@
+{
+  "name": "mongoolastic",
+  "description": "This is a mongoose plugin for elasticsearch",
+  "keywords": [
+    "mongoose",
+    "mongodb",
+    "elasticsearch"
+  ],
+  "author": "Steffen Strätz <info@moooji.com>",
+  "repository": {
+    "url": "https://github.com/moooji/mongoolastic"
+  },
+  "version": "0.10.0",
+  "dependencies": {
+    "bluebird": "^2.9.34",
+    "elasticsearch": "^8.0.1",
+    "lodash": "^3.10.1"
+  },
+  "devDependencies": {
+    "mocha": "*",
+    "should": ">= 0.0.1",
+    "assert": ">=0.0.1",
+    "mongoose": ">=0.0.1",
+    "mocha-jshint": ">=0.0.1"
+  },
+  "engines": {
+    "node": ">= 0.10.0"
+  },
+  "scripts": {
+    "test": "./node_modules/.bin/mocha -R spec"
+  },
+  "bugs": {
+    "url": "https://github.com/moooji/mongoolastic/issues"
+  },
+  "homepage": "https://github.com/moooji/mongoolastic",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "license": "MIT"
+}
