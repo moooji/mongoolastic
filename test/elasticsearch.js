@@ -15,8 +15,27 @@ chai.use(chaiAsPromised);
 var host = "localhost:9200";
 var index = "mongoolastic-test-index";
 
+var id = "123";
+var type = "Animal";
+var doc = {name: "Bob", hobby: "Mooo"};
+
+var query = {
+  'query_string': {
+    'query': 'Bob'
+  }
+};
+
+var mappings = {
+  'Animal': {
+    properties: {
+      name: {
+        type: 'string'
+      }
+    }
+  }
+};
+
 var indexSettings = {
-  'settings': {
     'index': {
       'analysis': {
         'filter': {
@@ -27,10 +46,9 @@ var indexSettings = {
         }
       }
     }
-  }
 };
 
-var indexNameTests = [
+var indexTests = [
   {index: null, isValid: false},
   {index: undefined, isValid: false},
   {index: {}, isValid: false},
@@ -70,9 +88,21 @@ var typesTests = [
   {type: [], isValid: false},
   {type: 123, isValid: false},
   {type: {}, isValid: false},
-  {type: {"Cows":{}}, isValid: false},
+  {type: {"Cows": {}}, isValid: false},
   {type: "abc", isValid: true},
   {type: "ABC", isValid: true}
+];
+
+var idTests = [
+  {id: null, isValid: false},
+  {id: undefined, isValid: false},
+  {id: {}, isValid: false},
+  {id: [], isValid: false},
+  {id: 123, isValid: false},
+  {id: {}, isValid: false},
+  {id: {"Cows": {}}, isValid: false},
+  {id: "abc", isValid: true},
+  {id: "ABC", isValid: true}
 ];
 
 describe('Elasticsearch - Connection', function() {
@@ -89,8 +119,8 @@ describe('Elasticsearch - Validation', function() {
 
   it('should check if index name is valid', function() {
 
-    indexNameTests.forEach(function(test) {
-      expect(elasticsearch.isValidIndexName(test.index))
+    indexTests.forEach(function(test) {
+      expect(elasticsearch.isValidIndex(test.index))
         .to.equal(test.isValid);
     });
   });
@@ -118,131 +148,114 @@ describe('Elasticsearch - Validation', function() {
         .to.equal(test.isValid);
     });
   });
-});
 
-describe('Elasticsearch - Errors', function() {
+  it('should check if id is valid', function() {
 
-  indexNameTests.forEach(function(test) {
-
-    if(test.isValid) {
-
-      it('should succeed if index is ' + test.index, function() {
-        return expect(elasticsearch.validateIndexName(test.index))
-          .to.eventually.be.fulfilled
-      });
-    }
-    else {
-      it('should throw InvalidArgumentError if index is ' + test.index, function() {
-        return expect(elasticsearch.validateIndexName(test.index))
-          .to.be.rejectedWith(InvalidArgumentError);
-      });
-    }
-  });
-})
-/*
-describe('Elasticsearch - Validate index settings', function() {
-
-  settingsTests.forEach(function(test) {
-
-    if(test.isValid) {
-
-      it('should succeed if index is ' + test.index + ' and settings ' + test.settings, function() {
-        return expect(elasticsearch.validateIndexSettings(test.index, test.settings))
-          .to.eventually.be.fulfilled
-      });
-    }
-    else {
-      it('should throw InvalidArgumentError if index is ' + test.index +
-        ' and settings ' + test.settings, function() {
-
-        return expect(elasticsearch.validateIndexSettings(test.index, test.settings))
-          .to.be.rejectedWith(InvalidArgumentError);
-      });
-    }
+    idTests.forEach(function(test) {
+      expect(elasticsearch.isValidId(test.id))
+        .to.equal(test.isValid);
+    });
   });
 });
-*/
+
 
 describe('Elasticsearch - Ensure index', function() {
 
   it('should create an index if it does not exist', function() {
 
-    return expect(elasticsearch.ensureIndex(index))
+    // Ensure the index
+    return expect(elasticsearch.ensureIndex(index, indexSettings, mappings))
       .to.eventually.be.fulfilled
-      .then(function() {
+      .then(function(res) {
 
+        expect(res.acknowledged).to.deep.equal(true);
+
+        // Check that index exists
         return expect(elasticsearch.indexExists(index))
           .to.eventually.be.fulfilled
           .then(function(indexExists) {
-            return expect(indexExists).to.be.true;
-          });
-      });
-  });
 
-});
+            expect(indexExists).to.deep.equal(true);
 
-describe('Elasticsearch - Delete index', function() {
-
-  it('should delete an existing index', function() {
-
-    return expect(elasticsearch.deleteIndex(index))
-      .to.eventually.be.fulfilled
-      .then(function() {
-
-        return expect(elasticsearch.indexExists(index))
-          .to.eventually.be.fulfilled
-          .then(function(indexExists) {
-            return expect(indexExists).to.be.false;
-          });
-      });
-  });
-});
-
-/*
-describe('Elasticsearch - Ensure index settings', function() {
-
-  it('should throw Error if index does not exist', function() {
-
-    return expect(elasticsearch.ensureIndexSettings(index, indexSettings))
-      .to.be.rejectedWith(Error);
-  });
-
-  it('should update the index settings', function() {
-
-    return expect(elasticsearch.ensureIndex(index))
-      .to.eventually.be.fulfilled
-      .then(function() {
-
-        return expect(elasticsearch.getIndexSettings(index))
-          .to.eventually.be.fulfilled
-          .then(function(oldSettings) {
-
-            return expect(elasticsearch.ensureIndexSettings(index, indexSettings))
+            // Check index settings
+            return expect(elasticsearch.getIndexSettings(index))
               .to.eventually.be.fulfilled
               .then(function(res) {
 
-                console.log(res);
+                expect(res).to.have.property(index);
+                expect(res[index]).to.have.property('settings');
+                expect(res[index].settings.index.analysis)
+                  .to.deep.equal(indexSettings.index.analysis);
 
-                return expect(elasticsearch.getIndexSettings(index))
+                // Check index mapping
+                return expect(elasticsearch.getIndexMapping(index))
                   .to.eventually.be.fulfilled
-                  .then(function(newSettings) {
+                  .then(function(res) {
 
-                    console.log(oldSettings);
-                    console.log(newSettings);
-
-                    return expect(newSettings).to.deepEqual(indexSettings);
+                    expect(res).to.have.property(index);
+                    expect(res[index]).to.have.property('mappings');
+                    expect(res[index].mappings)
+                      .to.deep.equal(mappings);
                   });
               });
           });
       });
   });
 });
-*/
+
 
 describe('Elasticsearch - Index document', function() {
 
   it('should add a new document if it does not exist', function() {
 
+    // Check that document does not exist yet
+    return expect(elasticsearch.docExists(id, type, index))
+      .to.eventually.be.fulfilled
+      .then(function(res) {
+
+        expect(res).to.deep.equal(false);
+
+        // Index the document
+        return expect(elasticsearch.indexDoc(id, doc, type, index))
+          .to.eventually.be.fulfilled
+          .then(function(res) {
+
+            expect(res.created).to.deep.equal(true);
+
+            // Get the document and compare to source
+            return expect(elasticsearch.getDoc(id, type, index))
+              .to.eventually.be.fulfilled
+              .then(function(res) {
+
+                expect(res.found).to.deep.equal(true);
+                expect(res._index).to.deep.equal(index);
+                expect(res._type).to.deep.equal(type);
+                expect(res._id).to.deep.equal(id);
+                expect(res._source).to.deep.equal(doc);
+              });
+          });
+      });
+  });
+});
+
+
+describe('Elasticsearch - Search', function() {
+
+  it('should search the index', function() {
+
+    return expect(elasticsearch.search(query))
+      .to.eventually.be.fulfilled
+      .then(function(res) {
+
+        expect(res).to.have.property('hits');
+        expect(res.hits.hits).to.have.length(1);
+
+        var hit = res.hits.hits[0];
+
+        expect(hit._id).to.equal(id);
+        expect(hit._type).to.equal(type);
+        expect(hit._source).to.deep.equal(doc);
+      });
   });
 });
 
@@ -250,5 +263,39 @@ describe('Elasticsearch - Delete document', function() {
 
   it('should delete a document', function() {
 
+    // Delete the document
+    return expect(elasticsearch.deleteDoc(id, type, index))
+      .to.eventually.be.fulfilled
+      .then(function(res) {
+
+        expect(res.found).to.deep.equal(true);
+
+        // Check that document does not exist anymore
+        return expect(elasticsearch.docExists(id, type, index))
+          .to.eventually.be.fulfilled
+          .then(function(res) {
+
+            expect(res).to.deep.equal(false);
+          });
+      });
+  });
+});
+
+describe('Elasticsearch - Delete index', function() {
+
+  it('should delete an existing index', function() {
+
+    // Delete the index
+    return expect(elasticsearch.deleteIndex(index))
+      .to.eventually.be.fulfilled
+      .then(function() {
+
+        // Check that the index does not exist anymore
+        return expect(elasticsearch.indexExists(index))
+          .to.eventually.be.fulfilled
+          .then(function(indexExists) {
+            return expect(indexExists).to.be.false;
+          });
+      });
   });
 });
