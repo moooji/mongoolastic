@@ -1,23 +1,18 @@
-"use strict";
+'use strict';
 
-var Promise = require("bluebird");
 var chai = require('chai');
-var chaiAsPromised = require("chai-as-promised");
+var chaiAsPromised = require('chai-as-promised');
 var elasticsearch = require('../lib/elasticsearch');
-var errors = require('../lib/errors');
-
-var InvalidArgumentError = errors.InvalidArgumentError;
 
 var expect = chai.expect;
-var should = chai.should;
 chai.use(chaiAsPromised);
 
-var host = "localhost:9200";
-var index = "mongoolastic-test-index";
+var host = 'localhost:9200';
+var index = 'mongoolastic-test-index';
 
-var id = "123";
-var type = "Animal";
-var doc = {name: "Bob", hobby: "Mooo"};
+var id = '123';
+var type = 'Animal';
+var doc = {name: 'Bob', hobby: 'Mooo'};
 
 var query = {
   'query_string': {
@@ -54,10 +49,10 @@ var indexTests = [
   {index: {}, isValid: false},
   {index: [], isValid: false},
   {index: 123, isValid: false},
-  {index: "ABC", isValid: false},
-  {index: "abcDEF", isValid: false},
-  {index: "abc", isValid: true},
-  {index: "abc-def", isValid: true}
+  {index: 'ABC', isValid: false},
+  {index: 'abcDEF', isValid: false},
+  {index: 'abc', isValid: true},
+  {index: 'abc-def', isValid: true}
 ];
 
 var settingsTests = [
@@ -66,7 +61,7 @@ var settingsTests = [
   {settings: {}, isValid: true},
   {settings: [], isValid: false},
   {settings: 123, isValid: false},
-  {settings: "abc", isValid: false},
+  {settings: 'abc', isValid: false},
   {settings: {}, isValid: true},
   {settings: indexSettings, isValid: true}
 ];
@@ -76,9 +71,9 @@ var mappingsTests = [
   {mappings: undefined, isValid: false},
   {mappings: [], isValid: false},
   {mappings: 123, isValid: false},
-  {mappings: "abc", isValid: false},
+  {mappings: 'abc', isValid: false},
   {mappings: {}, isValid: true},
-  {mappings: {"Cows": {}}, isValid: true}
+  {mappings: {'Cows': {}}, isValid: true}
 ];
 
 var typesTests = [
@@ -88,9 +83,9 @@ var typesTests = [
   {type: [], isValid: false},
   {type: 123, isValid: false},
   {type: {}, isValid: false},
-  {type: {"Cows": {}}, isValid: false},
-  {type: "abc", isValid: true},
-  {type: "ABC", isValid: true}
+  {type: {'Cows': {}}, isValid: false},
+  {type: 'abc', isValid: true},
+  {type: 'ABC', isValid: true}
 ];
 
 var idTests = [
@@ -100,16 +95,16 @@ var idTests = [
   {id: [], isValid: false},
   {id: 123, isValid: false},
   {id: {}, isValid: false},
-  {id: {"Cows": {}}, isValid: false},
-  {id: "abc", isValid: true},
-  {id: "ABC", isValid: true}
+  {id: {'Cows': {}}, isValid: false},
+  {id: 'abc', isValid: true},
+  {id: 'ABC', isValid: true}
 ];
 
 describe('Elasticsearch - Connection', function() {
 
   it('should create a connection', function() {
 
-    return expect(elasticsearch.connect({host: host}))
+    return expect(elasticsearch.connect(host))
       .to.eventually.be.fulfilled;
   });
 });
