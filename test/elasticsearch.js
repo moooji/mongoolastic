@@ -1,72 +1,106 @@
 "use strict";
 
-const chai = require('chai');
-const chaiAsPromised = require("chai-as-promised");
-const elasticsearch = require('../lib/elasticsearch');
-const errors = require('../lib/errors');
+var chai = require('chai');
+var chaiAsPromised = require("chai-as-promised");
+var Promise = require("bluebird");
+var elasticsearch = require('../lib/elasticsearch');
+var errors = require('../lib/errors');
 
-const InvalidArgumentError = errors.InvalidArgumentError;
+var InvalidArgumentError = errors.InvalidArgumentError;
 
-const expect = chai.expect;
-const should = chai.should;
+var expect = chai.expect;
+var should = chai.should;
 chai.use(chaiAsPromised);
 
-const host = "localhost:9200";
-const index = "mongoolastic-test-index";
+var host = "localhost:9200";
+var index = "mongoolastic-test-index";
 
-describe('Elasticsearch', function() {
+var indexNameTests = [
+  {index: null, isValid: false},
+  {index: undefined, isValid: false},
+  {index: {}, isValid: false},
+  {index: [], isValid: false},
+  {index: 123, isValid: false},
+  {index: "ABC", isValid: false},
+  {index: "abcDEF", isValid: false},
+  {index: "abc", isValid: true},
+  {index: "abc-def", isValid: true}
+];
 
-  it('should check if an index name is valid', function() {
+var settingsTests = [
+  {index: "abc-def", settings: null, isValid: false},
+  {index: "abc-def", settings: undefined, isValid: false},
+  {index: "abc-def", settings: {}, isValid: true},
+  {index: "abc-def", settings: [], isValid: false},
+  {index: "abc-def", settings: 123, isValid: false},
+  {index: "abc-def", settings: "abc", isValid: false},
+  {index: "abc-def", settings: {}, isValid: true},
+  {index: "abc-def", settings: {analyzers: {}}, isValid: true}
+];
 
-    var tests = [
-      { value: null, result: false },
-      { value: undefined, result: false },
-      { value: {}, result: false },
-      { value: [], result: false },
-      { value: 123, result: false },
-      { value: "ABC", result: false },
-      { value: "abcDEF", result: false },
-      { value: "abc", result: true },
-      { value: "abc-def", result: true }
-    ];
-
-    tests.forEach(function(test){
-      expect(elasticsearch.isValidIndexName(test.value)).to.equal(test.result);
-
-      if (test.result === true) {
-        expect(elasticsearch.validateIndexName(test.value))
-          .to.eventually.be.fulfilled
-          .then(function(index){
-            expect(index).to.equal(test.value);
-          });
-      }
-      else {
-        expect(elasticsearch.validateIndexName(test.value))
-          .to.be.rejectedWith(errors.InvalidArgumentError);
-      }
-    });
-  });
+describe('Elasticsearch - Connection', function() {
 
   it('should create a connection', function() {
 
     return expect(elasticsearch.connect({host: host}))
       .to.eventually.be.fulfilled;
   });
+});
 
-  it('should delete an index', function() {
 
-    return expect(elasticsearch.deleteIndex(index))
-      .to.eventually.be.fulfilled;
+describe('Elasticsearch - Validate index name', function() {
+
+  it('should check if an index name is not valid', function() {
+
+    indexNameTests.forEach(function(test) {
+      expect(elasticsearch.isValidIndexName(test.index))
+        .to.equal(test.isValid);
+    });
   });
 
-  it('should check if an index does not exist', function() {
+  indexNameTests.forEach(function(test) {
 
-    return expect(elasticsearch.indexExists(index))
-      .to.eventually.be.fulfilled
-      .then(function(indexExists) {
-        return expect(indexExists).to.be.false;
+    if(test.isValid) {
+
+      it('should succeed if index is ' + test.index, function() {
+        return expect(elasticsearch.validateIndexName(test.index))
+          .to.eventually.be.fulfilled
       });
+    }
+    else {
+      it('should throw InvalidArgumentError if index is ' + test.index, function() {
+        return expect(elasticsearch.validateIndexName(test.index))
+          .to.be.rejectedWith(InvalidArgumentError);
+      });
+    }
   });
+});
+
+
+describe('Elasticsearch - Validate index settings', function() {
+
+  settingsTests.forEach(function(test) {
+
+    if(test.isValid) {
+
+      it('should succeed if index is ' + test.index + ' and settings ' + test.settings, function() {
+        return expect(elasticsearch.validateIndexSettings(test.index, test.settings))
+          .to.eventually.be.fulfilled
+      });
+    }
+    else {
+      it('should throw InvalidArgumentError if index is ' + test.index +
+        ' and settings ' + test.settings, function() {
+
+        return expect(elasticsearch.validateIndexSettings(test.index, test.settings))
+          .to.be.rejectedWith(InvalidArgumentError);
+      });
+    }
+  });
+});
+
+
+describe('Elasticsearch - Ensure index', function() {
 
   it('should create an index if it does not exist', function() {
 
@@ -80,5 +114,53 @@ describe('Elasticsearch', function() {
             return expect(indexExists).to.be.true;
           });
       });
+  });
+
+
+});
+
+describe('Elasticsearch - Delete index', function() {
+
+  it('should delete an existing index', function() {
+
+    return expect(elasticsearch.deleteIndex(index))
+      .to.eventually.be.fulfilled
+      .then(function() {
+
+        return expect(elasticsearch.indexExists(index))
+          .to.eventually.be.fulfilled
+          .then(function(indexExists) {
+            return expect(indexExists).to.be.false;
+          });
+      });
+  });
+});
+
+
+describe('Elasticsearch - Ensure settings', function() {
+
+  it('should create settings if they do not exist', function() {
+
+  });
+});
+
+describe('Elasticsearch - Ensure mappings', function() {
+
+  it('should create mapping if it does not exist', function() {
+
+  });
+});
+
+describe('Elasticsearch - Index document', function() {
+
+  it('should add a new document if it does not exist', function() {
+
+  });
+});
+
+describe('Elasticsearch - Delete document', function() {
+
+  it('should delete a document', function() {
+
   });
 });
