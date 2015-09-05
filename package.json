@@ -13,15 +13,18 @@
   "version": "0.10.1",
   "dependencies": {
     "bluebird": "^2.9.34",
+    "custom-error-generator": "^7.0.0",
     "elasticsearch": "^8.0.1",
     "lodash": "^3.10.1"
   },
   "devDependencies": {
-    "mocha": "*",
-    "should": ">= 0.0.1",
     "assert": ">=0.0.1",
+    "chai": "^3.2.0",
+    "chai-as-promised": "^5.1.0",
+    "mocha": "*",
+    "mocha-jshint": ">=0.0.1",
     "mongoose": ">=0.0.1",
-    "mocha-jshint": ">=0.0.1"
+    "should": ">= 0.0.1"
   },
   "engines": {
     "node": ">= 0.10.0"
