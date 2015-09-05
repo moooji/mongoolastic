@@ -15,6 +15,7 @@ var type = 'Animal';
 var doc = {name: 'Bob', hobby: 'Mooo'};
 
 var query = {
+  'index': index,
   'query_string': {
     'query': 'Bob'
   }

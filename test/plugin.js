@@ -22,7 +22,10 @@ var catSchemaIndex = 'mongoolastic-test-cat';
 var CatSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true
+    required: true,
+    elasticsearch: {
+      type: 'string'
+    }
   },
   hobby: {
     type: String
@@ -136,6 +139,7 @@ describe('Plugin - Register', function() {
   });
 });
 
+
 describe('Plugin - Connect', function() {
 
   it('should connect to Elasticsearch', function() {
@@ -144,6 +148,7 @@ describe('Plugin - Connect', function() {
       .to.eventually.be.fulfilled;
   });
 });
+
 
 describe('Plugin - Index', function() {
 
@@ -154,9 +159,10 @@ describe('Plugin - Index', function() {
     newCat.save(function(err, res) {
 
       if(err) {
-        return done(err, res);
+        return done(err, null);
       }
 
+      // Give Elasticsearch some to index
       setTimeout(function(){
 
         return Promise.resolve(res)
@@ -167,18 +173,13 @@ describe('Plugin - Index', function() {
             return expect(elasticsearch.getDoc(doc.id, type, 'mongoolastic-test-cat'))
               .to.eventually.be.fulfilled
               .then(function(res) {
-
-                console.log(res);
                 return done(null, res);
               })
               .catch(function(err) {
-                console.error(err);
                 return done(err, null);
               });
           });
-
-      }, 1000);
-
+      }, 200);
     });
   });
 
@@ -186,9 +187,30 @@ describe('Plugin - Index', function() {
 
     var newDog = new DogModel({name: 'Bob', color: 'black'});
 
-    newDog.save(function(err, res){
-      console.log(err);
-      console.log(res);
+    newDog.save(function(err, res) {
+
+      if(err) {
+        return done(err, null);
+      }
+
+      // Give Elasticsearch some to index
+      setTimeout(function() {
+
+        return Promise.resolve(res)
+          .then(function(doc) {
+
+            var type = doc.constructor.modelName;
+
+            return expect(elasticsearch.getDoc(doc.id, type, 'mongoolastic-test-dog'))
+              .to.eventually.be.fulfilled
+              .then(function(res) {
+                return done(null, res);
+              })
+              .catch(function(err) {
+                return done(err, null);
+              });
+          });
+      }, 200);
     });
   });
 });
