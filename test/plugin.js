@@ -1,5 +1,6 @@
 "use strict";
 
+var Promise = require("bluebird");
 const chai = require('chai');
 const chaiAsPromised = require("chai-as-promised");
 const elasticsearch = require('../lib/plugin');
