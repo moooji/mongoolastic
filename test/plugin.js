@@ -4,6 +4,7 @@
 var chai = require('chai');
 var chaiAsPromised = require('chai-as-promised');
 var mongoose = require('mongoose');
+var elasticsearch = require('../lib/elasticsearch');
 var plugin = require('../lib/plugin');
 var errors = require('../lib/errors');
 
@@ -12,7 +13,12 @@ chai.use(chaiAsPromised);
 
 var host = 'localhost:9200';
 
-var catSchemaIndex = 'mongoolastic-cat-schema';
+
+/**
+ * Test data
+ *
+ */
+var catSchemaIndex = 'mongoolastic-test-cat';
 var CatSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -21,7 +27,7 @@ var CatSchema = new mongoose.Schema({
   hobby: {
     type: String
   }
-}, {_id: false});
+});
 
 var catSchemaSettings = {
   'index': {
@@ -36,7 +42,9 @@ var catSchemaSettings = {
   }
 };
 
-var dogSchemaIndex = 'mongoolastic-dog-schema';
+var CatModel = mongoose.model('Cat', CatSchema);
+
+var dogSchemaIndex = 'mongoolastic-test-dog';
 var DogSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -46,9 +54,42 @@ var DogSchema = new mongoose.Schema({
     type: String,
     required: true
   }
-}, {_id: false});
+});
 
+var DogModel = mongoose.model('Dog', DogSchema);
+
+/**
+ * MongoDB
+ *
+ *
+ *
+ */
+var connectionString = 'mongodb://localhost:27017/mongoolastic-test';
+var connectionOptions = { server: { auto_reconnect: true }};
+
+
+/**
+ * Tests
+ *
+ *
+ */
 describe('Plugin - Register', function() {
+
+  before(function(done){
+
+    function onConnectionError(err) {
+      throw err;
+    }
+
+    function onConnectionOpen() {
+      done();
+    }
+
+    mongoose.connection.on('error', onConnectionError);
+    mongoose.connection.once('open', onConnectionOpen);
+    mongoose.connect(connectionString, connectionOptions);
+
+  });
 
   it('should register a schema with settings', function() {
 
@@ -101,5 +142,53 @@ describe('Plugin - Connect', function() {
 
     return expect(plugin.connect(host))
       .to.eventually.be.fulfilled;
+  });
+});
+
+describe('Plugin - Index', function() {
+
+  it('should index a mongoose document when it has been saved', function(done) {
+
+    var newCat = new CatModel({name: 'Bob', hobby: 'woof'});
+
+    newCat.save(function(err, res) {
+
+      if(err) {
+        return done(err, res);
+      }
+
+      setTimeout(function(){
+
+        return Promise.resolve(res)
+          .then(function(doc) {
+
+            var type = doc.constructor.modelName;
+
+            return expect(elasticsearch.getDoc(doc.id, type, 'mongoolastic-test-cat'))
+              .to.eventually.be.fulfilled
+              .then(function(res) {
+
+                console.log(res);
+                return done(null, res);
+              })
+              .catch(function(err) {
+                console.error(err);
+                return done(err, null);
+              });
+          });
+
+      }, 1000);
+
+    });
+  });
+
+  it('should index a mongoose document when it has been saved', function() {
+
+    var newDog = new DogModel({name: 'Bob', color: 'black'});
+
+    newDog.save(function(err, res){
+      console.log(err);
+      console.log(res);
+    });
   });
 });
