@@ -13,17 +13,6 @@ const host = 'localhost:9200';
 
 const notExistingId = 'mongoolastic-test-not-existing-id';
 const notExistingIndex = 'mongoolastic-test-not-existing-index';
-const type = 'Animal';
-
-const mappings = {
-  'Animal': {
-    properties: {
-      name: {
-        type: 'string'
-      }
-    }
-  }
-};
 
 const indexSettings = {
   'index': {
@@ -156,6 +145,17 @@ describe('Elasticsearch - Validation', () => {
 describe('Elasticsearch - Ensure index', () => {
 
   const testIndex = 'mongoolastic-test-ensure-index';
+  const type = 'Cat';
+
+  const mappings = {
+    'Cat': {
+      properties: {
+        name: {
+          type: 'string'
+        }
+      }
+    }
+  };
 
   before((done) => {
 
@@ -354,6 +354,16 @@ describe('Elasticsearch - Ensure delete index', () => {
 describe('Elasticsearch - Get index mapping', () => {
 
   const testIndex = 'mongoolastic-test-get-index-mapping';
+  const type = 'Cat';
+  const mappings = {
+    'Cat': {
+      properties: {
+        name: {
+          type: 'string'
+        }
+      }
+    }
+  };
 
   before((done) => {
 
@@ -400,6 +410,17 @@ describe('Elasticsearch - Get index mapping', () => {
 describe('Elasticsearch - Get index settings', () => {
 
   const testIndex = 'mongoolastic-test-get-index-settings';
+  const type = 'Cat';
+
+  const mappings = {
+    'Cat': {
+      properties: {
+        name: {
+          type: 'string'
+        }
+      }
+    }
+  };
 
   before((done) => {
 
@@ -439,12 +460,29 @@ describe('Elasticsearch - Get index settings', () => {
 });
 
 
+/**
+ * Index document
+ *
+ *
+ */
 describe('Elasticsearch - Index document', () => {
 
   const testIndex = 'mongoolastic-test-index-document';
   const doc = {name: 'Bob', hobby: 'Mooo'};
   const docUpdated = {name: 'Bob', hobby: 'Wooof'};
   const id = '1234567890';
+  const type = 'Cat';
+
+  const mappings = {
+    'Cat': {
+      properties: {
+        name: {
+          type: 'string'
+        }
+      }
+    }
+  };
+
 
   before((done) => {
 
@@ -517,6 +555,18 @@ describe('Elasticsearch - Delete document', () => {
   const testIndex = 'mongoolastic-test-delete-document';
   const doc = {name: 'Bob', hobby: 'Mooo'};
   const id = '1234567890';
+  const type = 'Cat';
+
+  const mappings = {
+    'Cat': {
+      properties: {
+        name: {
+          type: 'string'
+        }
+      }
+    }
+  };
+
 
   before((done) => {
 
@@ -565,17 +615,100 @@ describe('Elasticsearch - Delete document', () => {
   });
 });
 
+
+/**
+ * Get document
+ *
+ */
+describe('Elasticsearch - Get document', () => {
+
+  const testIndex = 'mongoolastic-test-get-document';
+  const doc = {name: 'Bob', hobby: 'Mooo'};
+  const id = '1234567890';
+  const type = 'Cat';
+
+  const mappings = {
+    'Cat': {
+      properties: {
+        name: {
+          type: 'string'
+        }
+      }
+    }
+  };
+
+  before((done) => {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(() => {
+        elasticsearch.ensureIndex(testIndex, indexSettings, mappings)
+          .then(() => {
+            elasticsearch.indexDoc(id, doc, type, testIndex)
+              .then(() => done());
+          });
+      })
+      .catch(done);
+  });
+
+  it('should throw DocumentNotFoundError if document does not exist', () => {
+
+    // Delete the index
+    return expect(elasticsearch.getDoc(notExistingId, type, testIndex))
+      .to.be.rejectedWith(errors.DocumentNotFoundError);
+  });
+
+  it('should get a document', () => {
+
+    // Delete the document
+    return expect(elasticsearch.getDoc(id, type, testIndex))
+      .to.eventually.be.fulfilled
+      .then((res) => {
+
+        expect(res._id).to.deep.equal(id);
+        expect(res._type).to.deep.equal(type);
+        expect(res._index).to.deep.equal(testIndex);
+        expect(res._source).to.deep.equal(doc);
+      });
+  });
+
+  after((done) => {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(() => done())
+      .catch(done);
+  });
+});
+
+
+/**
+ * Search
+ *
+ *
+ */
 describe('Elasticsearch - Search', () => {
 
   const testIndex = 'mongoolastic-test-search';
   const doc = {name: 'Bob', hobby: 'Mooo'};
   const id = '1234567890';
+  const type = 'Cat';
+
+  const mappings = {
+    'Cat': {
+      properties: {
+        name: {
+          type: 'string'
+        }
+      }
+    }
+  };
+
   const query = {
     'index': testIndex,
     'query_string': {
       'query': 'Bob'
     }
   };
+
 
   before((done) => {
 

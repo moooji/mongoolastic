@@ -18,7 +18,6 @@ const elasticsearchTimeout = 200;
  * Test data
  *
  */
-const catIndex = 'mongoolastic-test-plugin-cat';
 const CatSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -32,22 +31,6 @@ const CatSchema = new mongoose.Schema({
   }
 });
 
-const catIndexSettings = {
-  'index': {
-    'analysis': {
-      'filter': {
-        'english_stop': {
-          'type': 'stop',
-          'stopwords': '_english_'
-        }
-      }
-    }
-  }
-};
-
-const CatModel = mongoose.model('Cat', CatSchema);
-
-const dogIndex = 'mongoolastic-test-plugin-dog';
 const DogSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -59,7 +42,23 @@ const DogSchema = new mongoose.Schema({
   }
 });
 
+const CatModel = mongoose.model('Cat', CatSchema);
+const SuperCatModel = mongoose.model('SuperCat', CatSchema);
 const DogModel = mongoose.model('Dog', DogSchema);
+
+const testIndex = 'mongoolastic-test-plugin';
+const testIndexSettings = {
+  'index': {
+    'analysis': {
+      'filter': {
+        'english_stop': {
+          'type': 'stop',
+          'stopwords': '_english_'
+        }
+      }
+    }
+  }
+};
 
 /**
  * MongoDB
@@ -94,34 +93,16 @@ describe('Plugin - Register', function() {
 
   });
 
-  it('should register a model with settings', function() {
+  it('should register the CatModel', function() {
 
-    return expect(plugin.registerModel(CatModel, catIndex, catIndexSettings))
+    return expect(plugin.registerModel(CatModel))
       .to.eventually.be.fulfilled;
   });
 
-  it('should register a schema without settings', function() {
+  it('should register the DogModel', function() {
 
-    return expect(plugin.registerModel(DogModel, dogIndex))
+    return expect(plugin.registerModel(DogModel))
       .to.eventually.be.fulfilled;
-  });
-
-  it('should throw an InvalidArgumentError if index is not valid', function() {
-
-    return expect(plugin.registerModel(CatModel, 123, catIndexSettings))
-      .to.be.rejectedWith(errors.InvalidArgumentError);
-  });
-
-  it('should throw an InvalidArgumentError if settings are not valid', function() {
-
-    return expect(plugin.registerModel(CatModel, catIndex, 123))
-      .to.be.rejectedWith(errors.InvalidArgumentError);
-  });
-
-  it('should throw an InvalidArgumentError if schema is not valid', function() {
-
-    return expect(plugin.registerModel(123, catIndex, catIndexSettings))
-      .to.be.rejectedWith(errors.InvalidArgumentError);
   });
 });
 
@@ -130,7 +111,7 @@ describe('Plugin - Connect', function() {
 
   it('should connect to Elasticsearch', function() {
 
-    return expect(plugin.connect(host))
+    return expect(plugin.connect(host, testIndex, testIndexSettings))
       .to.eventually.be.fulfilled;
   });
 });
@@ -140,7 +121,7 @@ describe('Plugin - Index', function() {
 
   before(function(done) {
 
-    elasticsearch.ensureDeleteIndex([catIndex, dogIndex])
+    elasticsearch.ensureDeleteIndex(testIndex)
       .then(() => done())
       .catch(done);
   });
@@ -165,7 +146,7 @@ describe('Plugin - Index', function() {
 
             const type = doc.constructor.modelName;
 
-            return expect(elasticsearch.getDoc(doc.id, type, catIndex))
+            return expect(elasticsearch.getDoc(doc.id, type, testIndex))
               .to.eventually.be.fulfilled
               .then(() => done())
               .catch(done);
@@ -193,10 +174,37 @@ describe('Plugin - Index', function() {
 
             const type = doc.constructor.modelName;
 
-            return expect(elasticsearch.getDoc(doc.id, type, dogIndex))
+            return expect(elasticsearch.getDoc(doc.id, type, testIndex))
               .to.eventually.be.fulfilled
               .then(() => done())
               .catch(done);
+          });
+      }, elasticsearchTimeout);
+    });
+  });
+
+  it('should not index a document of same schema, if model has not been registered before', function(done) {
+
+    const newSuperCat = new SuperCatModel({name: 'Jenny'});
+
+    newSuperCat.save((err, doc) => {
+
+      if (err) {
+        return done(err, null);
+      }
+
+      // TODO check MongoDB
+
+      setTimeout(() => {
+
+        return Bluebird.resolve(doc)
+          .then((doc) => {
+
+            const type = doc.constructor.modelName;
+
+            return expect(elasticsearch.getDoc(doc.id, type, testIndex))
+              .to.be.rejectedWith(errors.DocumentNotFoundError)
+              .then(() => done());
           });
       }, elasticsearchTimeout);
     });
