@@ -3,6 +3,7 @@
 var chai = require('chai');
 var chaiAsPromised = require('chai-as-promised');
 var elasticsearch = require('../lib/elasticsearch');
+var errors = require('../lib/errors');
 
 var expect = chai.expect;
 chai.use(chaiAsPromised);
@@ -53,7 +54,11 @@ var indexTests = [
   {index: 'ABC', isValid: false},
   {index: 'abcDEF', isValid: false},
   {index: 'abc', isValid: true},
-  {index: 'abc-def', isValid: true}
+  {index: 'abc-def', isValid: true},
+  {index: ['abc-def'], isValid: false},
+  {index: ['abc-def', 123], allowList: true, isValid: false},
+  {index: ['abc-def', 'ghi'], allowList: true, isValid: true},
+  {index: 'abc-def', allowList: true, isValid: true}
 ];
 
 var settingsTests = [
@@ -116,7 +121,7 @@ describe('Elasticsearch - Validation', function() {
   it('should check if index name is valid', function() {
 
     indexTests.forEach(function(test) {
-      expect(elasticsearch.isValidIndex(test.index))
+      expect(elasticsearch.isValidIndex(test.index, test.allowList))
         .to.equal(test.isValid);
     });
   });
@@ -184,7 +189,7 @@ describe('Elasticsearch - Ensure index', function() {
                   .to.deep.equal(indexSettings.index.analysis);
 
                 // Check index mapping
-                return expect(elasticsearch.getIndexMapping(index))
+                return expect(elasticsearch.getIndexMapping(index, type))
                   .to.eventually.be.fulfilled
                   .then(function(res) {
 
@@ -196,6 +201,26 @@ describe('Elasticsearch - Ensure index', function() {
               });
           });
       });
+  });
+});
+
+
+describe('Elasticsearch - Get index mapping', function() {
+
+  it('should throw an IndexNotFoundError if index does not exist', function() {
+
+    return expect(elasticsearch.getIndexMapping('mongoolastic-test-not-existing-index', type))
+      .to.be.rejectedWith(errors.IndexNotFoundError);
+  });
+});
+
+
+describe('Elasticsearch - Get index settings', function() {
+
+  it('should throw an IndexNotFoundError if index does not exist', function() {
+
+    return expect(elasticsearch.getIndexSettings('mongoolastic-test-not-existing-index', type))
+      .to.be.rejectedWith(errors.IndexNotFoundError);
   });
 });
 
@@ -257,6 +282,13 @@ describe('Elasticsearch - Search', function() {
 
 describe('Elasticsearch - Delete document', function() {
 
+  it('should throw DocumentNotFoundError if document does not exist', function() {
+
+    // Delete the index
+    return expect(elasticsearch.deleteDoc('123-123-123-456-document-test-id', type, index))
+      .to.be.rejectedWith(errors.DocumentNotFoundError);
+  });
+
   it('should delete a document', function() {
 
     // Delete the document
@@ -279,6 +311,13 @@ describe('Elasticsearch - Delete document', function() {
 
 describe('Elasticsearch - Delete index', function() {
 
+  it('should throw IndexNotFoundError if index does not exist', function() {
+
+    // Delete the index
+    return expect(elasticsearch.deleteIndex('mongoolastic-test-not-existing'))
+      .to.be.rejectedWith(errors.IndexNotFoundError);
+  });
+
   it('should delete an existing index', function() {
 
     // Delete the index
@@ -292,6 +331,18 @@ describe('Elasticsearch - Delete index', function() {
           .then(function(indexExists) {
             return expect(indexExists).to.be.false;
           });
+      });
+  });
+});
+
+describe('Elasticsearch - Ensure delete index', function() {
+
+  it('should not throw an IndexNotFoundError if index does not exist', function() {
+
+    return expect(elasticsearch.ensureDeleteIndex('mongoolastic-test-not-existing-index'))
+      .to.eventually.be.fulfilled
+      .then(function(res) {
+        console.log(res);
       });
   });
 });

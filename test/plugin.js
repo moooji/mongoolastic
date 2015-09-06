@@ -152,6 +152,26 @@ describe('Plugin - Connect', function() {
 
 describe('Plugin - Index', function() {
 
+  before(function(done) {
+
+    // Make sure that indices do not exist yet
+    elasticsearch.indexExists([catSchemaIndex, 'index-mooo'])
+      .then(function(indexExists) {
+
+        console.log(indexExists);
+        done();
+        /*
+        if(indexExists){
+          elasticsearch.deleteIndex(catSchemaIndex)
+            .then(function(res) {
+              return done();
+            });
+        }
+        */
+      });
+  });
+
+
   it('should index a mongoose document when it has been saved', function(done) {
 
     var newCat = new CatModel({name: 'Bob', hobby: 'woof'});
