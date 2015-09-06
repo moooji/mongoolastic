@@ -18,7 +18,7 @@ const elasticsearchTimeout = 200;
  * Test data
  *
  */
-const catSchemaIndex = 'mongoolastic-test-plugin-cat';
+const catIndex = 'mongoolastic-test-plugin-cat';
 const CatSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -32,7 +32,7 @@ const CatSchema = new mongoose.Schema({
   }
 });
 
-const catSchemaSettings = {
+const catIndexSettings = {
   'index': {
     'analysis': {
       'filter': {
@@ -47,7 +47,7 @@ const catSchemaSettings = {
 
 const CatModel = mongoose.model('Cat', CatSchema);
 
-const dogSchemaIndex = 'mongoolastic-test-plugin-dog';
+const dogIndex = 'mongoolastic-test-plugin-dog';
 const DogSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -85,7 +85,7 @@ describe('Plugin - Register', function() {
     }
 
     function onConnectionOpen() {
-      done();
+      return done();
     }
 
     mongoose.connection.on('error', onConnectionError);
@@ -94,47 +94,33 @@ describe('Plugin - Register', function() {
 
   });
 
-  it('should register a schema with settings', function() {
+  it('should register a model with settings', function() {
 
-    return expect(plugin.register(
-      CatSchema,
-      catSchemaIndex,
-      catSchemaSettings))
+    return expect(plugin.registerModel(CatModel, catIndex, catIndexSettings))
       .to.eventually.be.fulfilled;
   });
 
   it('should register a schema without settings', function() {
 
-    return expect(plugin.register(
-      DogSchema,
-      dogSchemaIndex))
+    return expect(plugin.registerModel(DogModel, dogIndex))
       .to.eventually.be.fulfilled;
   });
 
   it('should throw an InvalidArgumentError if index is not valid', function() {
 
-    return expect(plugin.register(
-      CatSchema,
-      123,
-      catSchemaSettings))
+    return expect(plugin.registerModel(CatModel, 123, catIndexSettings))
       .to.be.rejectedWith(errors.InvalidArgumentError);
   });
 
   it('should throw an InvalidArgumentError if settings are not valid', function() {
 
-    return expect(plugin.register(
-      CatSchema,
-      catSchemaIndex,
-      123))
+    return expect(plugin.registerModel(CatModel, catIndex, 123))
       .to.be.rejectedWith(errors.InvalidArgumentError);
   });
 
   it('should throw an InvalidArgumentError if schema is not valid', function() {
 
-    return expect(plugin.register(
-      123,
-      catSchemaIndex,
-      catSchemaSettings))
+    return expect(plugin.registerModel(123, catIndex, catIndexSettings))
       .to.be.rejectedWith(errors.InvalidArgumentError);
   });
 });
@@ -154,7 +140,7 @@ describe('Plugin - Index', function() {
 
   before(function(done) {
 
-    elasticsearch.ensureDeleteIndex([catSchemaIndex, dogSchemaIndex])
+    elasticsearch.ensureDeleteIndex([catIndex, dogIndex])
       .then(() => done())
       .catch(done);
   });
@@ -179,7 +165,7 @@ describe('Plugin - Index', function() {
 
             const type = doc.constructor.modelName;
 
-            return expect(elasticsearch.getDoc(doc.id, type, catSchemaIndex))
+            return expect(elasticsearch.getDoc(doc.id, type, catIndex))
               .to.eventually.be.fulfilled
               .then(() => done())
               .catch(done);
@@ -207,7 +193,7 @@ describe('Plugin - Index', function() {
 
             const type = doc.constructor.modelName;
 
-            return expect(elasticsearch.getDoc(doc.id, type, dogSchemaIndex))
+            return expect(elasticsearch.getDoc(doc.id, type, dogIndex))
               .to.eventually.be.fulfilled
               .then(() => done())
               .catch(done);
