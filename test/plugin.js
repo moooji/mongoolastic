@@ -253,6 +253,44 @@ describe('Plugin - Remove document', () => {
       }, elasticsearchTimeout);
     });
   });
+
+  it('should not attempt to delete a mongoose document from unregistered models', function(done) {
+
+    const newSuperCat = new SuperCatModel({name: 'Bing', hobby: 'swoosh'});
+
+    newSuperCat.save(function(err, doc) {
+
+      if(err) {
+        return done(err, null);
+      }
+
+      // TODO Add event to listen on
+
+      setTimeout(() => {
+
+        const type = doc.constructor.modelName;
+        return expect(elasticsearch.getDoc(doc.id, type, testIndex))
+          .to.be.rejectedWith(errors.DocumentNotFoundError)
+          .then(() => {
+
+            newSuperCat.remove((err) => {
+
+              if(err) {
+                return done(err, null);
+              }
+
+              setTimeout(() => {
+
+                return expect(elasticsearch.getDoc(doc.id, type, testIndex))
+                  .to.be.rejectedWith(errors.DocumentNotFoundError)
+                  .then(() => done());
+              }, elasticsearchTimeout);
+            });
+          })
+          .catch(done);
+      }, elasticsearchTimeout);
+    });
+  });
 });
 
 
