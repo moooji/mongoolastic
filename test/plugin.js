@@ -22,7 +22,11 @@ const CatSchema = new mongoose.Schema({
     type: String,
     required: true,
     elasticsearch: {
-      type: 'string'
+      mapping: {
+        index: 'not_analyzed',
+        type: 'string'
+      },
+      populate: true
     }
   },
   hobby: {
@@ -70,7 +74,7 @@ const connectionOptions = { server: { auto_reconnect: true }};
 
 
 /**
- * Tests
+ * Register plugin
  *
  *
  */
@@ -92,10 +96,14 @@ describe('Plugin - Register', function() {
 
   });
 
-  it('should register the CatModel', function() {
+  it('should register the CatModel and update mappings', function() {
 
     return expect(plugin.registerModel(CatModel))
-      .to.eventually.be.fulfilled;
+      .to.eventually.be.fulfilled
+      .then(() => {
+
+        console.log(plugin.getMappings());
+      });
   });
 
   it('should register the DogModel', function() {
