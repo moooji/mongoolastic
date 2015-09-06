@@ -157,8 +157,7 @@ describe('Plugin - Index', function() {
 
     // Make sure that indices do not exist yet
     elasticsearch.ensureDeleteIndex([catSchemaIndex, dogSchemaIndex])
-      .then(function(res) {
-        console.log(res);
+      .then(function() {
         return done();
       })
       .catch(function(err) {

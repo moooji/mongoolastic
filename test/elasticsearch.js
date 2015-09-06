@@ -10,19 +10,10 @@ var expect = chai.expect;
 chai.use(chaiAsPromised);
 
 var host = 'localhost:9200';
-var index = 'mongoolastic-test-index';
-var notExistingIndex = 'mongoolastic-test-not-existing';
 
-var id = '123';
+var notExistingId = 'mongoolastic-test-not-existing-id';
+var notExistingIndex = 'mongoolastic-test-not-existing-index';
 var type = 'Animal';
-var doc = {name: 'Bob', hobby: 'Mooo'};
-
-var query = {
-  'index': index,
-  'query_string': {
-    'query': 'Bob'
-  }
-};
 
 var mappings = {
   'Animal': {
@@ -229,9 +220,9 @@ describe('Elasticsearch - Ensure index', function() {
 describe('Elasticsearch - Delete index', function() {
 
   var testIndices = [
-    'mongoolastic-test-delete-index-1',
-    'mongoolastic-test-delete-index-2',
-    'mongoolastic-test-delete-index-3'
+    'mongoolastic-test-delete-1',
+    'mongoolastic-test-delete-2',
+    'mongoolastic-test-delete-3'
   ];
 
   before(function(done) {
@@ -302,12 +293,17 @@ describe('Elasticsearch - Delete index', function() {
   });
 });
 
+
+/**
+ * Ensure delete index
+ *
+ */
 describe('Elasticsearch - Ensure delete index', function() {
 
   var testIndices = [
-    'mongoolastic-test-ensure-delete-index-1',
-    'mongoolastic-test-ensure-delete-index-2',
-    'mongoolastic-test-ensure-delete-index-3'
+    'mongoolastic-test-ensure-delete-1',
+    'mongoolastic-test-ensure-delete-2',
+    'mongoolastic-test-ensure-delete-3'
   ];
 
   before(function(done) {
@@ -321,7 +317,8 @@ describe('Elasticsearch - Ensure delete index', function() {
                 return done();
               });
           });
-      });
+      })
+      .catch(done);
   });
 
   it('should not throw an IndexNotFoundError if index does not exist', function() {
@@ -354,8 +351,25 @@ describe('Elasticsearch - Ensure delete index', function() {
   });
 });
 
-
+/**
+ * Get index mapping
+ *
+ */
 describe('Elasticsearch - Get index mapping', function() {
+
+  var testIndex = 'mongoolastic-test-get-index-mapping';
+
+  before(function(done) {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(function() {
+        elasticsearch.ensureIndex(testIndex, indexSettings, mappings)
+          .then(function() {
+            return done();
+          });
+      })
+      .catch(done);
+  });
 
   it('should throw an IndexNotFoundError if index does not exist', function() {
 
@@ -365,12 +379,47 @@ describe('Elasticsearch - Get index mapping', function() {
 
   it('should return the mapping for an index and type', function() {
 
-    // TODO: Implement test
+    return expect(elasticsearch.getIndexMapping(testIndex, type))
+      .to.eventually.be.fulfilled
+      .then(function(res) {
+
+        expect(res).to.have.property(testIndex);
+        expect(res[testIndex]).to.have.property('mappings');
+        expect(res[testIndex].mappings)
+          .to.deep.equal(mappings);
+      });
+  });
+
+  after(function(done) {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(function() {
+        return done();
+      })
+      .catch(done);
   });
 });
 
 
+/**
+ * Get index settings
+ *
+ */
 describe('Elasticsearch - Get index settings', function() {
+
+  var testIndex = 'mongoolastic-test-get-index-settings';
+
+  before(function(done) {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(function() {
+        elasticsearch.ensureIndex(testIndex, indexSettings, mappings)
+          .then(function() {
+            return done();
+          });
+      })
+      .catch(done);
+  });
 
   it('should throw an IndexNotFoundError if index does not exist', function() {
 
@@ -380,70 +429,144 @@ describe('Elasticsearch - Get index settings', function() {
 
   it('should return the setting for an index', function() {
 
-    // TODO: Implement test
+    return expect(elasticsearch.getIndexSettings(testIndex))
+      .to.eventually.be.fulfilled
+      .then(function(res) {
+
+        expect(res).to.have.property(testIndex);
+        expect(res[testIndex]).to.have.property('settings');
+        expect(res[testIndex].settings.index.analysis)
+          .to.deep.equal(indexSettings.index.analysis);
+      });
+  });
+
+  after(function(done) {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(function() {
+        return done();
+      })
+      .catch(done);
   });
 });
 
 
 describe('Elasticsearch - Index document', function() {
 
+  var testIndex = 'mongoolastic-test-index-document';
+  var doc = {name: 'Bob', hobby: 'Mooo'};
+  var docUpdated = {name: 'Bob', hobby: 'Wooof'};
+  var id = '1234567890';
+
+  before(function(done) {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(function() {
+        elasticsearch.ensureIndex(testIndex, indexSettings, mappings)
+          .then(function() {
+            return done();
+          });
+      })
+      .catch(done);
+  });
+
   it('should add a new document if it does not exist', function() {
 
-    // Check that document does not exist yet
-    return expect(elasticsearch.docExists(id, type, index))
+    return expect(elasticsearch.indexDoc(id, doc, type, testIndex))
       .to.eventually.be.fulfilled
       .then(function(res) {
 
-        expect(res).to.deep.equal(false);
+        expect(res.created).to.deep.equal(true);
 
-        // Index the document
-        return expect(elasticsearch.indexDoc(id, doc, type, index))
+        // Get the document and compare to source
+        return expect(elasticsearch.getDoc(id, type, testIndex))
           .to.eventually.be.fulfilled
           .then(function(res) {
 
-            expect(res.created).to.deep.equal(true);
-
-            // Get the document and compare to source
-            return expect(elasticsearch.getDoc(id, type, index))
-              .to.eventually.be.fulfilled
-              .then(function(res) {
-
-                expect(res.found).to.deep.equal(true);
-                expect(res._index).to.deep.equal(index);
-                expect(res._type).to.deep.equal(type);
-                expect(res._id).to.deep.equal(id);
-                expect(res._source).to.deep.equal(doc);
-              });
+            expect(res.found).to.deep.equal(true);
+            expect(res._index).to.deep.equal(testIndex);
+            expect(res._type).to.deep.equal(type);
+            expect(res._id).to.deep.equal(id);
+            expect(res._source).to.deep.equal(doc);
           });
       });
   });
 
   it('should update an existing document', function() {
 
-    // TODO: Implement test
+    return expect(elasticsearch.indexDoc(id, docUpdated, type, testIndex))
+      .to.eventually.be.fulfilled
+      .then(function(res) {
+
+        expect(res.created).to.deep.equal(false);
+
+        // Get the document and compare to source
+        return expect(elasticsearch.getDoc(id, type, testIndex))
+          .to.eventually.be.fulfilled
+          .then(function(res) {
+
+            expect(res.found).to.deep.equal(true);
+            expect(res._index).to.deep.equal(testIndex);
+            expect(res._type).to.deep.equal(type);
+            expect(res._id).to.deep.equal(id);
+            expect(res._source).to.deep.equal(docUpdated);
+          });
+      });
+  });
+
+  after(function(done) {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(function() {
+        return done();
+      })
+      .catch(done);
   });
 });
 
+/**
+ * Delete document
+ *
+ */
 describe('Elasticsearch - Delete document', function() {
+
+  var testIndex = 'mongoolastic-test-delete-document';
+  var doc = {name: 'Bob', hobby: 'Mooo'};
+  var id = '1234567890';
+
+  before(function(done) {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(function() {
+        elasticsearch.ensureIndex(testIndex, indexSettings, mappings)
+          .then(function() {
+            elasticsearch.indexDoc(id, doc, type, testIndex)
+              .then(function() {
+                return done();
+              });
+          });
+      })
+      .catch(done);
+  });
 
   it('should throw DocumentNotFoundError if document does not exist', function() {
 
     // Delete the index
-    return expect(elasticsearch.deleteDoc('123-123-123-456-document-test-id', type, index))
+    return expect(elasticsearch.deleteDoc(notExistingId, type, testIndex))
       .to.be.rejectedWith(errors.DocumentNotFoundError);
   });
 
   it('should delete a document', function() {
 
     // Delete the document
-    return expect(elasticsearch.deleteDoc(id, type, index))
+    return expect(elasticsearch.deleteDoc(id, type, testIndex))
       .to.eventually.be.fulfilled
       .then(function(res) {
 
         expect(res.found).to.deep.equal(true);
 
         // Check that document does not exist anymore
-        return expect(elasticsearch.docExists(id, type, index))
+        return expect(elasticsearch.docExists(id, type, testIndex))
           .to.eventually.be.fulfilled
           .then(function(res) {
 
@@ -451,9 +574,43 @@ describe('Elasticsearch - Delete document', function() {
           });
       });
   });
+
+  after(function(done) {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(function() {
+        return done();
+      })
+      .catch(done);
+  });
 });
 
 describe('Elasticsearch - Search', function() {
+
+  var testIndex = 'mongoolastic-test-search';
+  var doc = {name: 'Bob', hobby: 'Mooo'};
+  var id = '1234567890';
+  var query = {
+    'index': testIndex,
+    'query_string': {
+      'query': 'Bob'
+    }
+  };
+
+  before(function(done) {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(function() {
+        elasticsearch.ensureIndex(testIndex, indexSettings, mappings)
+          .then(function() {
+            elasticsearch.indexDoc(id, doc, type, testIndex)
+              .then(function() {
+                return done();
+              });
+          });
+      })
+      .catch(done);
+  });
 
   it('should search the index and find a document', function() {
 
@@ -470,5 +627,14 @@ describe('Elasticsearch - Search', function() {
         expect(hit._type).to.equal(type);
         expect(hit._source).to.deep.equal(doc);
       });
+  });
+
+  after(function(done) {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(function() {
+        return done();
+      })
+      .catch(done);
   });
 });
