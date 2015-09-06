@@ -1,5 +1,6 @@
 'use strict';
 
+var _ = require('lodash');
 var chai = require('chai');
 var chaiAsPromised = require('chai-as-promised');
 var elasticsearch = require('../lib/elasticsearch');
@@ -10,6 +11,7 @@ chai.use(chaiAsPromised);
 
 var host = 'localhost:9200';
 var index = 'mongoolastic-test-index';
+var notExistingIndex = 'mongoolastic-test-not-existing';
 
 var id = '123';
 var type = 'Animal';
@@ -33,16 +35,16 @@ var mappings = {
 };
 
 var indexSettings = {
-    'index': {
-      'analysis': {
-        'filter': {
-          'english_stop': {
-            'type': 'stop',
-            'stopwords': '_english_'
-          }
+  'index': {
+    'analysis': {
+      'filter': {
+        'english_stop': {
+          'type': 'stop',
+          'stopwords': '_english_'
         }
       }
     }
+  }
 };
 
 var indexTests = [
@@ -162,44 +164,192 @@ describe('Elasticsearch - Validation', function() {
 
 describe('Elasticsearch - Ensure index', function() {
 
+  var testIndex = 'mongoolastic-test-ensure-index';
+
+  before(function(done) {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(function() {
+        return done();
+      })
+      .catch(done);
+  });
+
   it('should create an index if it does not exist', function() {
 
     // Ensure the index
-    return expect(elasticsearch.ensureIndex(index, indexSettings, mappings))
+    return expect(elasticsearch.ensureIndex(testIndex, indexSettings, mappings))
       .to.eventually.be.fulfilled
       .then(function(res) {
 
         expect(res.acknowledged).to.deep.equal(true);
 
         // Check that index exists
-        return expect(elasticsearch.indexExists(index))
+        return expect(elasticsearch.indexExists(testIndex))
           .to.eventually.be.fulfilled
           .then(function(indexExists) {
 
             expect(indexExists).to.deep.equal(true);
 
             // Check index settings
-            return expect(elasticsearch.getIndexSettings(index))
+            return expect(elasticsearch.getIndexSettings(testIndex))
               .to.eventually.be.fulfilled
               .then(function(res) {
 
-                expect(res).to.have.property(index);
-                expect(res[index]).to.have.property('settings');
-                expect(res[index].settings.index.analysis)
+                expect(res).to.have.property(testIndex);
+                expect(res[testIndex]).to.have.property('settings');
+                expect(res[testIndex].settings.index.analysis)
                   .to.deep.equal(indexSettings.index.analysis);
 
                 // Check index mapping
-                return expect(elasticsearch.getIndexMapping(index, type))
+                return expect(elasticsearch.getIndexMapping(testIndex, type))
                   .to.eventually.be.fulfilled
                   .then(function(res) {
 
-                    expect(res).to.have.property(index);
-                    expect(res[index]).to.have.property('mappings');
-                    expect(res[index].mappings)
+                    expect(res).to.have.property(testIndex);
+                    expect(res[testIndex]).to.have.property('mappings');
+                    expect(res[testIndex].mappings)
                       .to.deep.equal(mappings);
                   });
               });
           });
+      });
+  });
+
+  after(function(done) {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(function() {
+        return done();
+      })
+      .catch(done);
+  });
+});
+
+describe('Elasticsearch - Delete index', function() {
+
+  var testIndices = [
+    'mongoolastic-test-delete-index-1',
+    'mongoolastic-test-delete-index-2',
+    'mongoolastic-test-delete-index-3'
+  ];
+
+  before(function(done) {
+
+    elasticsearch.ensureIndex(testIndices[0], {}, {})
+      .then(function(){
+        return elasticsearch.ensureIndex(testIndices[1], {}, {})
+          .then(function(){
+            return elasticsearch.ensureIndex(testIndices[2], {}, {})
+              .then(function(){
+                return done();
+              });
+          });
+      })
+      .catch(done);
+  });
+
+  it('should throw IndexNotFoundError if index does not exist', function() {
+
+    // Delete the index
+    return expect(elasticsearch.deleteIndex(notExistingIndex))
+      .to.be.rejectedWith(errors.IndexNotFoundError);
+  });
+
+  it('should throw IndexOperationError if delete operation is not acknowledged', function() {
+
+    // TODO: Implement this test
+
+  });
+
+  it('should delete an existing index (string)', function() {
+
+    var testIndex = testIndices.pop();
+
+    // Delete the index
+    return expect(elasticsearch.deleteIndex(testIndex))
+      .to.eventually.be.fulfilled
+      .then(function() {
+
+        // Check that the index does not exist anymore
+        return expect(elasticsearch.indexExists(testIndex))
+          .to.eventually.be.fulfilled
+          .then(function(indexExists) {
+            return expect(indexExists).to.be.false;
+          });
+      });
+  });
+
+  it('should delete existing indices (list)', function() {
+
+    // Delete the index
+    return expect(elasticsearch.deleteIndex(testIndices))
+      .to.eventually.be.fulfilled
+      .then(function(){
+        return testIndices;
+      })
+      .map(function(index) {
+
+        // Check existence for all supplied indices
+        return elasticsearch.indexExists(index)
+          .then(function(indexExists) {
+            return indexExists ? index : null;
+          });
+      })
+      .then(function(res) {
+        return expect(_.every(res, false));
+      });
+  });
+});
+
+describe('Elasticsearch - Ensure delete index', function() {
+
+  var testIndices = [
+    'mongoolastic-test-ensure-delete-index-1',
+    'mongoolastic-test-ensure-delete-index-2',
+    'mongoolastic-test-ensure-delete-index-3'
+  ];
+
+  before(function(done) {
+
+    elasticsearch.ensureIndex(testIndices[0], {}, {})
+      .then(function(){
+        return elasticsearch.ensureIndex(testIndices[1], {}, {})
+          .then(function(){
+            return elasticsearch.ensureIndex(testIndices[2], {}, {})
+              .then(function(){
+                return done();
+              });
+          });
+      });
+  });
+
+  it('should not throw an IndexNotFoundError if index does not exist', function() {
+
+    return expect(elasticsearch.ensureDeleteIndex(notExistingIndex))
+      .to.eventually.be.fulfilled
+      .then(function(res) {
+        return expect(res).to.deep.equal([]);
+      });
+  });
+
+  it('should delete the supplied index (string) and return list of deletions', function() {
+
+    var testIndex = testIndices.pop();
+
+    return expect(elasticsearch.ensureDeleteIndex(testIndex))
+      .to.eventually.be.fulfilled
+      .then(function(res) {
+        return expect(res).to.deep.equal([testIndex]);
+      });
+  });
+
+  it('should delete the supplied indices (list) and return list of deletions', function() {
+
+    return expect(elasticsearch.ensureDeleteIndex(testIndices))
+      .to.eventually.be.fulfilled
+      .then(function(res) {
+        return expect(res).to.deep.equal(testIndices);
       });
   });
 });
@@ -209,8 +359,13 @@ describe('Elasticsearch - Get index mapping', function() {
 
   it('should throw an IndexNotFoundError if index does not exist', function() {
 
-    return expect(elasticsearch.getIndexMapping('mongoolastic-test-not-existing-index', type))
+    return expect(elasticsearch.getIndexMapping(notExistingIndex, type))
       .to.be.rejectedWith(errors.IndexNotFoundError);
+  });
+
+  it('should return the mapping for an index and type', function() {
+
+    // TODO: Implement test
   });
 });
 
@@ -219,8 +374,13 @@ describe('Elasticsearch - Get index settings', function() {
 
   it('should throw an IndexNotFoundError if index does not exist', function() {
 
-    return expect(elasticsearch.getIndexSettings('mongoolastic-test-not-existing-index', type))
+    return expect(elasticsearch.getIndexSettings(notExistingIndex, type))
       .to.be.rejectedWith(errors.IndexNotFoundError);
+  });
+
+  it('should return the setting for an index', function() {
+
+    // TODO: Implement test
   });
 });
 
@@ -257,26 +417,10 @@ describe('Elasticsearch - Index document', function() {
           });
       });
   });
-});
 
+  it('should update an existing document', function() {
 
-describe('Elasticsearch - Search', function() {
-
-  it('should search the index', function() {
-
-    return expect(elasticsearch.search(query))
-      .to.eventually.be.fulfilled
-      .then(function(res) {
-
-        expect(res).to.have.property('hits');
-        expect(res.hits.hits).to.have.length(1);
-
-        var hit = res.hits.hits[0];
-
-        expect(hit._id).to.equal(id);
-        expect(hit._type).to.equal(type);
-        expect(hit._source).to.deep.equal(doc);
-      });
+    // TODO: Implement test
   });
 });
 
@@ -309,50 +453,22 @@ describe('Elasticsearch - Delete document', function() {
   });
 });
 
-describe('Elasticsearch - Delete index', function() {
+describe('Elasticsearch - Search', function() {
 
-  it('should throw IndexNotFoundError if index does not exist', function() {
+  it('should search the index and find a document', function() {
 
-    // Delete the index
-    return expect(elasticsearch.deleteIndex('mongoolastic-test-not-existing'))
-      .to.be.rejectedWith(errors.IndexNotFoundError);
-  });
-
-  it('should throw IndexOperationError if delete operation is not acknowledged', function() {
-
-    // TODO: Implement this test
-
-  });
-
-  it('should delete an existing index', function() {
-
-    // Delete the index
-    return expect(elasticsearch.deleteIndex(index))
-      .to.eventually.be.fulfilled
-      .then(function() {
-
-        // Check that the index does not exist anymore
-        return expect(elasticsearch.indexExists(index))
-          .to.eventually.be.fulfilled
-          .then(function(indexExists) {
-            return expect(indexExists).to.be.false;
-          });
-      });
-  });
-});
-
-describe('Elasticsearch - Ensure delete index', function() {
-
-  it('should not throw an IndexNotFoundError if index does not exist', function() {
-
-    return expect(elasticsearch.ensureDeleteIndex('mongoolastic-test-not-existing-index'))
+    return expect(elasticsearch.search(query))
       .to.eventually.be.fulfilled
       .then(function(res) {
-        return expect(res).to.deep.equal([]);
+
+        expect(res).to.have.property('hits');
+        expect(res.hits.hits).to.have.length(1);
+
+        var hit = res.hits.hits[0];
+
+        expect(hit._id).to.equal(id);
+        expect(hit._type).to.equal(type);
+        expect(hit._source).to.deep.equal(doc);
       });
-  });
-
-  it('should delete the supplied indices and return list of deletions', function() {
-
   });
 });
