@@ -342,7 +342,11 @@ describe('Elasticsearch - Ensure delete index', function() {
     return expect(elasticsearch.ensureDeleteIndex('mongoolastic-test-not-existing-index'))
       .to.eventually.be.fulfilled
       .then(function(res) {
-        console.log(res);
+        return expect(res).to.deep.equal([]);
       });
+  });
+
+  it('should delete the supplied indices and return list of deletions', function() {
+
   });
 });

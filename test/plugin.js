@@ -2,6 +2,7 @@
 
 //var Promise = require('bluebird');
 var chai = require('chai');
+var Promise = require('bluebird');
 var chaiAsPromised = require('chai-as-promised');
 var mongoose = require('mongoose');
 var elasticsearch = require('../lib/elasticsearch');
@@ -203,7 +204,7 @@ describe('Plugin - Index', function() {
     });
   });
 
-  it('should index a mongoose document when it has been saved', function() {
+  it('should index a mongoose document when it has been saved', function(done) {
 
     var newDog = new DogModel({name: 'Bob', color: 'black'});
 
