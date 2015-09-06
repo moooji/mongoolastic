@@ -156,19 +156,13 @@ describe('Plugin - Index', function() {
   before(function(done) {
 
     // Make sure that indices do not exist yet
-    elasticsearch.indexExists([catSchemaIndex, 'index-mooo'])
-      .then(function(indexExists) {
-
-        console.log(indexExists);
-        done();
-        /*
-        if(indexExists){
-          elasticsearch.deleteIndex(catSchemaIndex)
-            .then(function(res) {
-              return done();
-            });
-        }
-        */
+    elasticsearch.ensureDeleteIndex([catSchemaIndex, dogSchemaIndex])
+      .then(function(res) {
+        console.log(res);
+        return done();
+      })
+      .catch(function(err) {
+        return done(err);
       });
   });
 

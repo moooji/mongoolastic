@@ -318,6 +318,12 @@ describe('Elasticsearch - Delete index', function() {
       .to.be.rejectedWith(errors.IndexNotFoundError);
   });
 
+  it('should throw IndexOperationError if delete operation is not acknowledged', function() {
+
+    // TODO: Implement this test
+
+  });
+
   it('should delete an existing index', function() {
 
     // Delete the index
