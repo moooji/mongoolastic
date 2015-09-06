@@ -1,21 +1,21 @@
 'use strict';
 
-var _ = require('lodash');
-var chai = require('chai');
-var chaiAsPromised = require('chai-as-promised');
-var elasticsearch = require('../lib/elasticsearch');
-var errors = require('../lib/errors');
+const _ = require('lodash');
+const chai = require('chai');
+const chaiAsPromised = require('chai-as-promised');
+const elasticsearch = require('../lib/elasticsearch');
+const errors = require('../lib/errors');
 
-var expect = chai.expect;
+const expect = chai.expect;
 chai.use(chaiAsPromised);
 
-var host = 'localhost:9200';
+const host = 'localhost:9200';
 
-var notExistingId = 'mongoolastic-test-not-existing-id';
-var notExistingIndex = 'mongoolastic-test-not-existing-index';
-var type = 'Animal';
+const notExistingId = 'mongoolastic-test-not-existing-id';
+const notExistingIndex = 'mongoolastic-test-not-existing-index';
+const type = 'Animal';
 
-var mappings = {
+const mappings = {
   'Animal': {
     properties: {
       name: {
@@ -25,7 +25,7 @@ var mappings = {
   }
 };
 
-var indexSettings = {
+const indexSettings = {
   'index': {
     'analysis': {
       'filter': {
@@ -38,7 +38,7 @@ var indexSettings = {
   }
 };
 
-var indexTests = [
+const indexTests = [
   {index: null, isValid: false},
   {index: undefined, isValid: false},
   {index: {}, isValid: false},
@@ -54,7 +54,7 @@ var indexTests = [
   {index: 'abc-def', allowList: true, isValid: true}
 ];
 
-var settingsTests = [
+const settingsTests = [
   {settings: null, isValid: false},
   {settings: undefined, isValid: false},
   {settings: {}, isValid: true},
@@ -65,7 +65,7 @@ var settingsTests = [
   {settings: indexSettings, isValid: true}
 ];
 
-var mappingsTests = [
+const mappingsTests = [
   {mappings: null, isValid: false},
   {mappings: undefined, isValid: false},
   {mappings: [], isValid: false},
@@ -75,7 +75,7 @@ var mappingsTests = [
   {mappings: {'Cows': {}}, isValid: true}
 ];
 
-var typesTests = [
+const typesTests = [
   {type: null, isValid: false},
   {type: undefined, isValid: false},
   {type: {}, isValid: false},
@@ -87,7 +87,7 @@ var typesTests = [
   {type: 'ABC', isValid: true}
 ];
 
-var idTests = [
+const idTests = [
   {id: null, isValid: false},
   {id: undefined, isValid: false},
   {id: {}, isValid: false},
@@ -99,53 +99,53 @@ var idTests = [
   {id: 'ABC', isValid: true}
 ];
 
-describe('Elasticsearch - Connection', function() {
+describe('Elasticsearch - Connection', () => {
 
-  it('should create a connection', function() {
-
+  it('should create a connection', () => {
+    
     return expect(elasticsearch.connect(host))
       .to.eventually.be.fulfilled;
   });
 });
 
 
-describe('Elasticsearch - Validation', function() {
+describe('Elasticsearch - Validation', () => {
 
-  it('should check if index name is valid', function() {
+  it('should check if index name is valid', () => {
 
-    indexTests.forEach(function(test) {
+    indexTests.forEach((test) => {
       expect(elasticsearch.isValidIndex(test.index, test.allowList))
         .to.equal(test.isValid);
     });
   });
 
-  it('should check if settings are valid', function() {
+  it('should check if settings are valid', () => {
 
-    settingsTests.forEach(function(test) {
+    settingsTests.forEach((test) => {
       expect(elasticsearch.isValidSettings(test.settings))
         .to.equal(test.isValid);
     });
   });
 
-  it('should check if mappings are valid', function() {
+  it('should check if mappings are valid', () => {
 
-    mappingsTests.forEach(function(test) {
+    mappingsTests.forEach((test) => {
       expect(elasticsearch.isValidMappings(test.mappings))
         .to.equal(test.isValid);
     });
   });
 
-  it('should check if type is valid', function() {
+  it('should check if type is valid', () => {
 
-    typesTests.forEach(function(test) {
+    typesTests.forEach((test) => {
       expect(elasticsearch.isValidType(test.type))
         .to.equal(test.isValid);
     });
   });
 
-  it('should check if id is valid', function() {
+  it('should check if id is valid', () => {
 
-    idTests.forEach(function(test) {
+    idTests.forEach((test) => {
       expect(elasticsearch.isValidId(test.id))
         .to.equal(test.isValid);
     });
@@ -153,39 +153,37 @@ describe('Elasticsearch - Validation', function() {
 });
 
 
-describe('Elasticsearch - Ensure index', function() {
+describe('Elasticsearch - Ensure index', () => {
 
-  var testIndex = 'mongoolastic-test-ensure-index';
+  const testIndex = 'mongoolastic-test-ensure-index';
 
-  before(function(done) {
+  before((done) => {
 
     elasticsearch.ensureDeleteIndex(testIndex)
-      .then(function() {
-        return done();
-      })
+      .then(() => done())
       .catch(done);
   });
 
-  it('should create an index if it does not exist', function() {
+  it('should create an index if it does not exist', () => {
 
     // Ensure the index
     return expect(elasticsearch.ensureIndex(testIndex, indexSettings, mappings))
       .to.eventually.be.fulfilled
-      .then(function(res) {
+      .then((res) => {
 
         expect(res.acknowledged).to.deep.equal(true);
 
         // Check that index exists
         return expect(elasticsearch.indexExists(testIndex))
           .to.eventually.be.fulfilled
-          .then(function(indexExists) {
+          .then((indexExists) => {
 
             expect(indexExists).to.deep.equal(true);
 
             // Check index settings
             return expect(elasticsearch.getIndexSettings(testIndex))
               .to.eventually.be.fulfilled
-              .then(function(res) {
+              .then((res) => {
 
                 expect(res).to.have.property(testIndex);
                 expect(res[testIndex]).to.have.property('settings');
@@ -195,7 +193,7 @@ describe('Elasticsearch - Ensure index', function() {
                 // Check index mapping
                 return expect(elasticsearch.getIndexMapping(testIndex, type))
                   .to.eventually.be.fulfilled
-                  .then(function(res) {
+                  .then((res) => {
 
                     expect(res).to.have.property(testIndex);
                     expect(res[testIndex]).to.have.property('mappings');
@@ -207,32 +205,30 @@ describe('Elasticsearch - Ensure index', function() {
       });
   });
 
-  after(function(done) {
+  after((done) => {
 
     elasticsearch.ensureDeleteIndex(testIndex)
-      .then(function() {
-        return done();
-      })
+      .then(() => done())
       .catch(done);
   });
 });
 
-describe('Elasticsearch - Delete index', function() {
+describe('Elasticsearch - Delete index', () => {
 
-  var testIndices = [
+  const testIndices = [
     'mongoolastic-test-delete-1',
     'mongoolastic-test-delete-2',
     'mongoolastic-test-delete-3'
   ];
 
-  before(function(done) {
+  before((done) => {
 
     elasticsearch.ensureIndex(testIndices[0], {}, {})
-      .then(function(){
+      .then(() => {
         return elasticsearch.ensureIndex(testIndices[1], {}, {})
-          .then(function(){
+          .then(() => {
             return elasticsearch.ensureIndex(testIndices[2], {}, {})
-              .then(function(){
+              .then(() => {
                 return done();
               });
           });
@@ -240,54 +236,54 @@ describe('Elasticsearch - Delete index', function() {
       .catch(done);
   });
 
-  it('should throw IndexNotFoundError if index does not exist', function() {
+  it('should throw IndexNotFoundError if index does not exist', () => {
 
     // Delete the index
     return expect(elasticsearch.deleteIndex(notExistingIndex))
       .to.be.rejectedWith(errors.IndexNotFoundError);
   });
 
-  it('should throw IndexOperationError if delete operation is not acknowledged', function() {
+  it('should throw IndexOperationError if delete operation is not acknowledged', () => {
 
     // TODO: Implement this test
 
   });
 
-  it('should delete an existing index (string)', function() {
+  it('should delete an existing index (string)', () => {
 
-    var testIndex = testIndices.pop();
+    const testIndex = testIndices.pop();
 
     // Delete the index
     return expect(elasticsearch.deleteIndex(testIndex))
       .to.eventually.be.fulfilled
-      .then(function() {
+      .then(() => {
 
         // Check that the index does not exist anymore
         return expect(elasticsearch.indexExists(testIndex))
           .to.eventually.be.fulfilled
-          .then(function(indexExists) {
+          .then((indexExists) => {
             return expect(indexExists).to.be.false;
           });
       });
   });
 
-  it('should delete existing indices (list)', function() {
+  it('should delete existing indices (list)', () => {
 
     // Delete the index
     return expect(elasticsearch.deleteIndex(testIndices))
       .to.eventually.be.fulfilled
-      .then(function(){
+      .then(() =>{
         return testIndices;
       })
       .map(function(index) {
 
         // Check existence for all supplied indices
         return elasticsearch.indexExists(index)
-          .then(function(indexExists) {
+          .then((indexExists) => {
             return indexExists ? index : null;
           });
       })
-      .then(function(res) {
+      .then((res) => {
         return expect(_.every(res, false));
       });
   });
@@ -298,22 +294,22 @@ describe('Elasticsearch - Delete index', function() {
  * Ensure delete index
  *
  */
-describe('Elasticsearch - Ensure delete index', function() {
+describe('Elasticsearch - Ensure delete index', () => {
 
-  var testIndices = [
+  let testIndices = [
     'mongoolastic-test-ensure-delete-1',
     'mongoolastic-test-ensure-delete-2',
     'mongoolastic-test-ensure-delete-3'
   ];
 
-  before(function(done) {
+  before((done) => {
 
     elasticsearch.ensureIndex(testIndices[0], {}, {})
-      .then(function(){
+      .then(() => {
         return elasticsearch.ensureIndex(testIndices[1], {}, {})
-          .then(function(){
+          .then(() => {
             return elasticsearch.ensureIndex(testIndices[2], {}, {})
-              .then(function(){
+              .then(() => {
                 return done();
               });
           });
@@ -321,31 +317,31 @@ describe('Elasticsearch - Ensure delete index', function() {
       .catch(done);
   });
 
-  it('should not throw an IndexNotFoundError if index does not exist', function() {
+  it('should not throw an IndexNotFoundError if index does not exist', () => {
 
     return expect(elasticsearch.ensureDeleteIndex(notExistingIndex))
       .to.eventually.be.fulfilled
-      .then(function(res) {
+      .then((res) => {
         return expect(res).to.deep.equal([]);
       });
   });
 
-  it('should delete the supplied index (string) and return list of deletions', function() {
+  it('should delete the supplied index (string) and return list of deletions', () => {
 
-    var testIndex = testIndices.pop();
+    const testIndex = testIndices.pop();
 
     return expect(elasticsearch.ensureDeleteIndex(testIndex))
       .to.eventually.be.fulfilled
-      .then(function(res) {
+      .then((res) => {
         return expect(res).to.deep.equal([testIndex]);
       });
   });
 
-  it('should delete the supplied indices (list) and return list of deletions', function() {
+  it('should delete the supplied indices (list) and return list of deletions', () => {
 
     return expect(elasticsearch.ensureDeleteIndex(testIndices))
       .to.eventually.be.fulfilled
-      .then(function(res) {
+      .then((res) => {
         return expect(res).to.deep.equal(testIndices);
       });
   });
@@ -355,33 +351,31 @@ describe('Elasticsearch - Ensure delete index', function() {
  * Get index mapping
  *
  */
-describe('Elasticsearch - Get index mapping', function() {
+describe('Elasticsearch - Get index mapping', () => {
 
-  var testIndex = 'mongoolastic-test-get-index-mapping';
+  const testIndex = 'mongoolastic-test-get-index-mapping';
 
-  before(function(done) {
+  before((done) => {
 
     elasticsearch.ensureDeleteIndex(testIndex)
-      .then(function() {
+      .then(() => {
         elasticsearch.ensureIndex(testIndex, indexSettings, mappings)
-          .then(function() {
-            return done();
-          });
+          .then(() => done());
       })
       .catch(done);
   });
 
-  it('should throw an IndexNotFoundError if index does not exist', function() {
+  it('should throw an IndexNotFoundError if index does not exist', () => {
 
     return expect(elasticsearch.getIndexMapping(notExistingIndex, type))
       .to.be.rejectedWith(errors.IndexNotFoundError);
   });
 
-  it('should return the mapping for an index and type', function() {
+  it('should return the mapping for an index and type', () => {
 
     return expect(elasticsearch.getIndexMapping(testIndex, type))
       .to.eventually.be.fulfilled
-      .then(function(res) {
+      .then((res) => {
 
         expect(res).to.have.property(testIndex);
         expect(res[testIndex]).to.have.property('mappings');
@@ -390,12 +384,10 @@ describe('Elasticsearch - Get index mapping', function() {
       });
   });
 
-  after(function(done) {
+  after((done) => {
 
     elasticsearch.ensureDeleteIndex(testIndex)
-      .then(function() {
-        return done();
-      })
+      .then(() => done())
       .catch(done);
   });
 });
@@ -405,33 +397,31 @@ describe('Elasticsearch - Get index mapping', function() {
  * Get index settings
  *
  */
-describe('Elasticsearch - Get index settings', function() {
+describe('Elasticsearch - Get index settings', () => {
 
-  var testIndex = 'mongoolastic-test-get-index-settings';
+  const testIndex = 'mongoolastic-test-get-index-settings';
 
-  before(function(done) {
+  before((done) => {
 
     elasticsearch.ensureDeleteIndex(testIndex)
-      .then(function() {
+      .then(() => {
         elasticsearch.ensureIndex(testIndex, indexSettings, mappings)
-          .then(function() {
-            return done();
-          });
+          .then(() => done());
       })
       .catch(done);
   });
 
-  it('should throw an IndexNotFoundError if index does not exist', function() {
+  it('should throw an IndexNotFoundError if index does not exist', () => {
 
     return expect(elasticsearch.getIndexSettings(notExistingIndex, type))
       .to.be.rejectedWith(errors.IndexNotFoundError);
   });
 
-  it('should return the setting for an index', function() {
+  it('should return the setting for an index', () => {
 
     return expect(elasticsearch.getIndexSettings(testIndex))
       .to.eventually.be.fulfilled
-      .then(function(res) {
+      .then((res) => {
 
         expect(res).to.have.property(testIndex);
         expect(res[testIndex]).to.have.property('settings');
@@ -440,48 +430,44 @@ describe('Elasticsearch - Get index settings', function() {
       });
   });
 
-  after(function(done) {
+  after((done) => {
 
     elasticsearch.ensureDeleteIndex(testIndex)
-      .then(function() {
-        return done();
-      })
+      .then(() => done())
       .catch(done);
   });
 });
 
 
-describe('Elasticsearch - Index document', function() {
+describe('Elasticsearch - Index document', () => {
 
-  var testIndex = 'mongoolastic-test-index-document';
-  var doc = {name: 'Bob', hobby: 'Mooo'};
-  var docUpdated = {name: 'Bob', hobby: 'Wooof'};
-  var id = '1234567890';
+  const testIndex = 'mongoolastic-test-index-document';
+  const doc = {name: 'Bob', hobby: 'Mooo'};
+  const docUpdated = {name: 'Bob', hobby: 'Wooof'};
+  const id = '1234567890';
 
-  before(function(done) {
+  before((done) => {
 
     elasticsearch.ensureDeleteIndex(testIndex)
-      .then(function() {
+      .then(() => {
         elasticsearch.ensureIndex(testIndex, indexSettings, mappings)
-          .then(function() {
-            return done();
-          });
+          .then(() => done());
       })
       .catch(done);
   });
 
-  it('should add a new document if it does not exist', function() {
+  it('should add a new document if it does not exist', () => {
 
     return expect(elasticsearch.indexDoc(id, doc, type, testIndex))
       .to.eventually.be.fulfilled
-      .then(function(res) {
+      .then((res) => {
 
         expect(res.created).to.deep.equal(true);
 
         // Get the document and compare to source
         return expect(elasticsearch.getDoc(id, type, testIndex))
           .to.eventually.be.fulfilled
-          .then(function(res) {
+          .then((res) => {
 
             expect(res.found).to.deep.equal(true);
             expect(res._index).to.deep.equal(testIndex);
@@ -492,18 +478,18 @@ describe('Elasticsearch - Index document', function() {
       });
   });
 
-  it('should update an existing document', function() {
+  it('should update an existing document', () => {
 
     return expect(elasticsearch.indexDoc(id, docUpdated, type, testIndex))
       .to.eventually.be.fulfilled
-      .then(function(res) {
+      .then((res) => {
 
         expect(res.created).to.deep.equal(false);
 
         // Get the document and compare to source
         return expect(elasticsearch.getDoc(id, type, testIndex))
           .to.eventually.be.fulfilled
-          .then(function(res) {
+          .then((res) => {
 
             expect(res.found).to.deep.equal(true);
             expect(res._index).to.deep.equal(testIndex);
@@ -514,12 +500,10 @@ describe('Elasticsearch - Index document', function() {
       });
   });
 
-  after(function(done) {
+  after((done) => {
 
     elasticsearch.ensureDeleteIndex(testIndex)
-      .then(function() {
-        return done();
-      })
+      .then(() => done())
       .catch(done);
   });
 });
@@ -528,100 +512,94 @@ describe('Elasticsearch - Index document', function() {
  * Delete document
  *
  */
-describe('Elasticsearch - Delete document', function() {
+describe('Elasticsearch - Delete document', () => {
 
-  var testIndex = 'mongoolastic-test-delete-document';
-  var doc = {name: 'Bob', hobby: 'Mooo'};
-  var id = '1234567890';
+  const testIndex = 'mongoolastic-test-delete-document';
+  const doc = {name: 'Bob', hobby: 'Mooo'};
+  const id = '1234567890';
 
-  before(function(done) {
+  before((done) => {
 
     elasticsearch.ensureDeleteIndex(testIndex)
-      .then(function() {
+      .then(() => {
         elasticsearch.ensureIndex(testIndex, indexSettings, mappings)
-          .then(function() {
+          .then(() => {
             elasticsearch.indexDoc(id, doc, type, testIndex)
-              .then(function() {
-                return done();
-              });
+              .then(() => done());
           });
       })
       .catch(done);
   });
 
-  it('should throw DocumentNotFoundError if document does not exist', function() {
+  it('should throw DocumentNotFoundError if document does not exist', () => {
 
     // Delete the index
     return expect(elasticsearch.deleteDoc(notExistingId, type, testIndex))
       .to.be.rejectedWith(errors.DocumentNotFoundError);
   });
 
-  it('should delete a document', function() {
+  it('should delete a document', () => {
 
     // Delete the document
     return expect(elasticsearch.deleteDoc(id, type, testIndex))
       .to.eventually.be.fulfilled
-      .then(function(res) {
+      .then((res) => {
 
         expect(res.found).to.deep.equal(true);
 
         // Check that document does not exist anymore
         return expect(elasticsearch.docExists(id, type, testIndex))
           .to.eventually.be.fulfilled
-          .then(function(res) {
+          .then((res) => {
 
             expect(res).to.deep.equal(false);
           });
       });
   });
 
-  after(function(done) {
+  after((done) => {
 
     elasticsearch.ensureDeleteIndex(testIndex)
-      .then(function() {
-        return done();
-      })
+      .then(() => done())
       .catch(done);
   });
 });
 
-describe('Elasticsearch - Search', function() {
+describe('Elasticsearch - Search', () => {
 
-  var testIndex = 'mongoolastic-test-search';
-  var doc = {name: 'Bob', hobby: 'Mooo'};
-  var id = '1234567890';
-  var query = {
+  const testIndex = 'mongoolastic-test-search';
+  const doc = {name: 'Bob', hobby: 'Mooo'};
+  const id = '1234567890';
+  const query = {
     'index': testIndex,
     'query_string': {
       'query': 'Bob'
     }
   };
 
-  before(function(done) {
+  before((done) => {
 
     elasticsearch.ensureDeleteIndex(testIndex)
-      .then(function() {
+      .then(() => {
         elasticsearch.ensureIndex(testIndex, indexSettings, mappings)
-          .then(function() {
+          .then(() => {
             elasticsearch.indexDoc(id, doc, type, testIndex)
-              .then(function() {
-                return done();
-              });
+              .then(() => done());
           });
       })
       .catch(done);
   });
 
-  it('should search the index and find a document', function() {
+  it('should search the index and find a document', () => {
 
     return expect(elasticsearch.search(query))
       .to.eventually.be.fulfilled
-      .then(function(res) {
+      .then((res) => {
 
         expect(res).to.have.property('hits');
         expect(res.hits.hits).to.have.length(1);
 
-        var hit = res.hits.hits[0];
+        const hit = res.hits.hits[0];
 
         expect(hit._id).to.equal(id);
         expect(hit._type).to.equal(type);
@@ -629,12 +607,10 @@ describe('Elasticsearch - Search', function() {
       });
   });
 
-  after(function(done) {
+  after((done) => {
 
     elasticsearch.ensureDeleteIndex(testIndex)
-      .then(function() {
-        return done();
-      })
+      .then(() => done())
       .catch(done);
   });
 });

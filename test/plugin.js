@@ -1,26 +1,25 @@
 'use strict';
 
-//var Promise = require('bluebird');
-var chai = require('chai');
-var Promise = require('bluebird');
-var chaiAsPromised = require('chai-as-promised');
-var mongoose = require('mongoose');
-var elasticsearch = require('../lib/elasticsearch');
-var plugin = require('../lib/plugin');
-var errors = require('../lib/errors');
+const chai = require('chai');
+const Bluebird = require('bluebird');
+const chaiAsPromised = require('chai-as-promised');
+const mongoose = require('mongoose');
+const elasticsearch = require('../lib/elasticsearch');
+const plugin = require('../lib/plugin');
+const errors = require('../lib/errors');
 
-var expect = chai.expect;
+const expect = chai.expect;
 chai.use(chaiAsPromised);
 
-var host = 'localhost:9200';
-
+const host = 'localhost:9200';
+const elasticsearchTimeout = 200;
 
 /**
  * Test data
  *
  */
-var catSchemaIndex = 'mongoolastic-test-cat';
-var CatSchema = new mongoose.Schema({
+const catSchemaIndex = 'mongoolastic-test-plugin-cat';
+const CatSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
@@ -33,7 +32,7 @@ var CatSchema = new mongoose.Schema({
   }
 });
 
-var catSchemaSettings = {
+const catSchemaSettings = {
   'index': {
     'analysis': {
       'filter': {
@@ -46,10 +45,10 @@ var catSchemaSettings = {
   }
 };
 
-var CatModel = mongoose.model('Cat', CatSchema);
+const CatModel = mongoose.model('Cat', CatSchema);
 
-var dogSchemaIndex = 'mongoolastic-test-dog';
-var DogSchema = new mongoose.Schema({
+const dogSchemaIndex = 'mongoolastic-test-plugin-dog';
+const DogSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true
@@ -60,7 +59,7 @@ var DogSchema = new mongoose.Schema({
   }
 });
 
-var DogModel = mongoose.model('Dog', DogSchema);
+const DogModel = mongoose.model('Dog', DogSchema);
 
 /**
  * MongoDB
@@ -68,8 +67,8 @@ var DogModel = mongoose.model('Dog', DogSchema);
  *
  *
  */
-var connectionString = 'mongodb://localhost:27017/mongoolastic-test';
-var connectionOptions = { server: { auto_reconnect: true }};
+const connectionString = 'mongodb://localhost:27017/mongoolastic-test';
+const connectionOptions = { server: { auto_reconnect: true }};
 
 
 /**
@@ -155,76 +154,65 @@ describe('Plugin - Index', function() {
 
   before(function(done) {
 
-    // Make sure that indices do not exist yet
     elasticsearch.ensureDeleteIndex([catSchemaIndex, dogSchemaIndex])
-      .then(function() {
-        return done();
-      })
-      .catch(function(err) {
-        return done(err);
-      });
+      .then(() => done())
+      .catch(done);
   });
 
 
   it('should index a mongoose document when it has been saved', function(done) {
 
-    var newCat = new CatModel({name: 'Bob', hobby: 'woof'});
+    const newCat = new CatModel({name: 'Bob', hobby: 'woof'});
 
-    newCat.save(function(err, res) {
+    newCat.save(function(err, doc) {
 
       if(err) {
         return done(err, null);
       }
 
-      // Give Elasticsearch some to index
-      setTimeout(function(){
+      // TODO check MongoDB
 
-        return Promise.resolve(res)
-          .then(function(doc) {
+      setTimeout(() => {
 
-            var type = doc.constructor.modelName;
+        return Bluebird.resolve(doc)
+          .then((doc) => {
 
-            return expect(elasticsearch.getDoc(doc.id, type, 'mongoolastic-test-cat'))
+            const type = doc.constructor.modelName;
+
+            return expect(elasticsearch.getDoc(doc.id, type, catSchemaIndex))
               .to.eventually.be.fulfilled
-              .then(function(res) {
-                return done(null, res);
-              })
-              .catch(function(err) {
-                return done(err, null);
-              });
+              .then(() => done())
+              .catch(done);
           });
-      }, 200);
+      }, elasticsearchTimeout);
     });
   });
 
   it('should index a mongoose document when it has been saved', function(done) {
 
-    var newDog = new DogModel({name: 'Bob', color: 'black'});
+    const newDog = new DogModel({name: 'Bob', color: 'black'});
 
-    newDog.save(function(err, res) {
+    newDog.save((err, doc) => {
 
       if(err) {
         return done(err, null);
       }
 
-      // Give Elasticsearch some to index
-      setTimeout(function() {
+      // TODO check MongoDB
 
-        return Promise.resolve(res)
-          .then(function(doc) {
+      setTimeout(() => {
 
-            var type = doc.constructor.modelName;
+        return Bluebird.resolve(doc)
+          .then((doc) => {
 
-            return expect(elasticsearch.getDoc(doc.id, type, 'mongoolastic-test-dog'))
+            const type = doc.constructor.modelName;
+
+            return expect(elasticsearch.getDoc(doc.id, type, dogSchemaIndex))
               .to.eventually.be.fulfilled
-              .then(function(res) {
-                return done(null, res);
-              })
-              .catch(function(err) {
-                return done(err, null);
-              });
+              .then(() => done())
+              .catch(done);
           });
-      }, 200);
+      }, elasticsearchTimeout);
     });
   });
 });

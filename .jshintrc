@@ -1,4 +1,5 @@
 {
+  "esnext": true,
   "unused": true,
   "node": true,
   "white": false,
