@@ -1,7 +1,6 @@
 'use strict';
 
 const chai = require('chai');
-const Bluebird = require('bluebird');
 const chaiAsPromised = require('chai-as-promised');
 const mongoose = require('mongoose');
 const elasticsearch = require('../lib/elasticsearch');
@@ -107,6 +106,11 @@ describe('Plugin - Register', function() {
 });
 
 
+/**
+ * Connect
+ *
+ *
+ */
 describe('Plugin - Connect', function() {
 
   it('should connect to Elasticsearch', function() {
@@ -117,7 +121,12 @@ describe('Plugin - Connect', function() {
 });
 
 
-describe('Plugin - Index', function() {
+/**
+ * Index document
+ *
+ *
+ */
+describe('Plugin - Index document', function() {
 
   before(function(done) {
 
@@ -137,20 +146,14 @@ describe('Plugin - Index', function() {
         return done(err, null);
       }
 
-      // TODO check MongoDB
-
       setTimeout(() => {
 
-        return Bluebird.resolve(doc)
-          .then((doc) => {
+        const type = doc.constructor.modelName;
+        return expect(elasticsearch.getDoc(doc.id, type, testIndex))
+          .to.eventually.be.fulfilled
+          .then(() => done())
+          .catch(done);
 
-            const type = doc.constructor.modelName;
-
-            return expect(elasticsearch.getDoc(doc.id, type, testIndex))
-              .to.eventually.be.fulfilled
-              .then(() => done())
-              .catch(done);
-          });
       }, elasticsearchTimeout);
     });
   });
@@ -165,20 +168,14 @@ describe('Plugin - Index', function() {
         return done(err, null);
       }
 
-      // TODO check MongoDB
-
       setTimeout(() => {
 
-        return Bluebird.resolve(doc)
-          .then((doc) => {
+        const type = doc.constructor.modelName;
+        return expect(elasticsearch.getDoc(doc.id, type, testIndex))
+          .to.eventually.be.fulfilled
+          .then(() => done())
+          .catch(done);
 
-            const type = doc.constructor.modelName;
-
-            return expect(elasticsearch.getDoc(doc.id, type, testIndex))
-              .to.eventually.be.fulfilled
-              .then(() => done())
-              .catch(done);
-          });
       }, elasticsearchTimeout);
     });
   });
@@ -193,20 +190,69 @@ describe('Plugin - Index', function() {
         return done(err, null);
       }
 
-      // TODO check MongoDB
-
       setTimeout(() => {
 
-        return Bluebird.resolve(doc)
-          .then((doc) => {
+        const type = doc.constructor.modelName;
+        return expect(elasticsearch.getDoc(doc.id, type, testIndex))
+          .to.be.rejectedWith(errors.DocumentNotFoundError)
+          .then(() => done());
 
-            const type = doc.constructor.modelName;
-
-            return expect(elasticsearch.getDoc(doc.id, type, testIndex))
-              .to.be.rejectedWith(errors.DocumentNotFoundError)
-              .then(() => done());
-          });
       }, elasticsearchTimeout);
     });
   });
 });
+
+
+/**
+ * Remove document
+ *
+ *
+ */
+describe('Plugin - Remove document', () => {
+
+  before(function(done) {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(() => done())
+      .catch(done);
+  });
+
+
+  it('should delete a mongoose document from Elasticsearch when it has been removed', function(done) {
+
+    const newCat = new CatModel({name: 'Jeff', hobby: 'woof'});
+
+    newCat.save(function(err, doc) {
+
+      if(err) {
+        return done(err, null);
+      }
+
+      setTimeout(() => {
+
+        const type = doc.constructor.modelName;
+        return expect(elasticsearch.getDoc(doc.id, type, testIndex))
+          .to.eventually.be.fulfilled
+          .then(() => {
+
+            newCat.remove((err) => {
+
+              if(err) {
+                return done(err, null);
+              }
+
+              setTimeout(() => {
+
+                return expect(elasticsearch.getDoc(doc.id, type, testIndex))
+                  .to.be.rejectedWith(errors.DocumentNotFoundError)
+                  .then(() => done());
+              }, elasticsearchTimeout);
+            });
+          })
+          .catch(done);
+      }, elasticsearchTimeout);
+    });
+  });
+});
+
+
