@@ -201,10 +201,58 @@ describe('Plugin - Register population', function() {
  */
 describe('Plugin - Connect', function() {
 
+  before((done) => {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(() => done())
+      .catch(done);
+  });
+
   it('should connect to Elasticsearch', function() {
 
+    const expectedMappings = {
+      Cat: {
+        properties: {
+          name: {
+            type: 'string',
+            index: 'not_analyzed'
+          },
+          hobbies: {
+            properties: {
+              likes: {
+                type: 'long'
+              }
+            }
+          },
+          candy: {
+            properties: {
+              name: {
+                index: 'not_analyzed',
+                type: 'string'
+              }
+            }
+          }
+        }
+      }
+    };
+
     return expect(plugin.connect(host, testIndex, testIndexSettings))
-      .to.eventually.be.fulfilled;
+      .to.eventually.be.fulfilled
+      .then(() => {
+
+        return expect(elasticsearch.getIndexSettings(testIndex))
+          .to.eventually.be.fulfilled
+          .then(() => {
+
+            return expect(elasticsearch.getIndexMapping(testIndex, CatModel.modelName))
+              .to.eventually.be.fulfilled
+              .then((res) => {
+
+                return expect(res[testIndex].mappings)
+                  .to.deep.equal(expectedMappings);
+              });
+          });
+      });
   });
 });
 
