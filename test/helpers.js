@@ -4,7 +4,7 @@ const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 const mongoose = require('mongoose');
 const helpers = require('../lib/helpers');
-//const errors = require('../lib/errors');
+const errors = require('../lib/errors');
 
 const expect = chai.expect;
 chai.use(chaiAsPromised);
@@ -153,6 +153,11 @@ describe('Helpers - Get model mapping', function() {
   const populationModels = new Map();
   populationModels.set(FoodModel.modelName, FoodModel);
   populationModels.set(IngredientModel.modelName, IngredientModel);
+
+  it('should throw InvalidArgumentError if supplied schema is not valid mongoose schema', () => {
+    return expect(() => helpers.renderMapping({notValid: true}, populationModels))
+      .to.throw(errors.InvalidArgumentError);
+  });
 
   it('should create mappings', () => {
     return expect(helpers.renderMapping(CowModel.schema, populationModels))

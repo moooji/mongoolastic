@@ -11,12 +11,27 @@ const expect = chai.expect;
 chai.use(chaiAsPromised);
 
 const host = 'localhost:9200';
-const elasticsearchTimeout = 200;
+const elasticsearchTimeout = 100;
 
 /**
  * Test data
  *
  */
+const HobbySchema = new mongoose.Schema({
+  likes: {
+    type: Number,
+    required: true,
+    elasticsearch: {
+      mapping: {
+        type: 'long'
+      }
+    }
+  },
+  activity: {
+    type: String
+  }
+});
+
 const CatSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -25,27 +40,16 @@ const CatSchema = new mongoose.Schema({
       mapping: {
         index: 'not_analyzed',
         type: 'string'
-      },
-      populate: true
+      }
     }
   },
-  hobby: {
+  color: {
     type: String
   },
+  hobbies: [HobbySchema],
   candy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Candy'
-  }
-});
-
-const DogSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true
-  },
-  color: {
-    type: String,
-    required: true
   }
 });
 
@@ -67,9 +71,7 @@ const CandySchema = new mongoose.Schema({
 
 const CatModel = mongoose.model('Cat', CatSchema);
 const SuperCatModel = mongoose.model('SuperCat', CatSchema);
-const DogModel = mongoose.model('Dog', DogSchema);
 const CandyModel = mongoose.model('Candy', CandySchema);
-
 
 const testIndex = 'mongoolastic-test-plugin';
 const testIndexSettings = {
@@ -115,20 +117,33 @@ mongoose.connect(connectionString, connectionOptions);
  */
 describe('Plugin - Register model', function() {
 
-  it('should register the CatModel and update mappings', function() {
+  it('should register a model and update mappings', function() {
+
+    const expectedMappings = {
+      Cat: {
+        properties: {
+          name: {
+            type: 'string',
+            index: 'not_analyzed'
+          },
+          hobbies: {
+            properties: {
+              likes: {
+                type: 'long'
+              }
+            }
+          }
+        }
+      }
+    };
 
     return expect(plugin.registerModel(CatModel))
       .to.eventually.be.fulfilled
       .then(() => {
 
-        console.log(plugin.getMappings());
+        return expect(plugin.getMappings())
+          .to.deep.equal(expectedMappings);
       });
-  });
-
-  it('should register the DogModel', function() {
-
-    return expect(plugin.registerModel(DogModel))
-      .to.eventually.be.fulfilled;
   });
 });
 
@@ -140,13 +155,40 @@ describe('Plugin - Register model', function() {
  */
 describe('Plugin - Register population', function() {
 
-  it('should register the a model for population', function() {
+  it('should register a population model and update mappings', function() {
+
+    const expectedMappings = {
+      Cat: {
+        properties: {
+          name: {
+            type: 'string',
+            index: 'not_analyzed'
+          },
+          hobbies: {
+            properties: {
+              likes: {
+                type: 'long'
+              }
+            }
+          },
+          candy: {
+            properties: {
+              name: {
+                index: 'not_analyzed',
+                type: 'string'
+              }
+            }
+          }
+        }
+      }
+    };
 
     return expect(plugin.registerPopulation(CandyModel))
       .to.eventually.be.fulfilled
       .then(() => {
 
-        console.log(plugin.getMappings());
+        return expect(plugin.getMappings())
+          .to.deep.equal(expectedMappings);
       });
   });
 });
@@ -174,41 +216,18 @@ describe('Plugin - Connect', function() {
  */
 describe('Plugin - Index document', function() {
 
-  before(function(done) {
+  before((done) => {
 
     elasticsearch.ensureDeleteIndex(testIndex)
       .then(() => done())
       .catch(done);
   });
 
+  it('should index a mongoose document when it has been saved', (done) => {
 
-  it('should index a mongoose document when it has been saved', function(done) {
+    const newCat = new CatModel({name: 'Bingo'});
 
-    const newCat = new CatModel({name: 'Bob', hobby: 'woof'});
-
-    newCat.save(function(err, doc) {
-
-      if(err) {
-        return done(err, null);
-      }
-
-      setTimeout(() => {
-
-        const type = doc.constructor.modelName;
-        return expect(elasticsearch.getDoc(doc.id, type, testIndex))
-          .to.eventually.be.fulfilled
-          .then(() => done())
-          .catch(done);
-
-      }, elasticsearchTimeout);
-    });
-  });
-
-  it('should index a mongoose document when it has been saved', function(done) {
-
-    const newDog = new DogModel({name: 'Bob', color: 'black'});
-
-    newDog.save((err, doc) => {
+    newCat.save((err, doc) => {
 
       if(err) {
         return done(err, null);
@@ -219,14 +238,69 @@ describe('Plugin - Index document', function() {
         const type = doc.constructor.modelName;
         return expect(elasticsearch.getDoc(doc.id, type, testIndex))
           .to.eventually.be.fulfilled
-          .then(() => done())
+          .then((res) => {
+
+            expect(res._index).to.deep.equal(testIndex);
+            expect(res._id).to.deep.equal(newCat.id);
+            expect(res._type).to.deep.equal(newCat.constructor.modelName);
+            expect(res._source._id).to.deep.equal(newCat.id);
+            expect(res._source.name).to.deep.equal(newCat.name);
+            expect(res._source.hobbies).to.deep.equal([]);
+
+            return done();
+          })
           .catch(done);
 
       }, elasticsearchTimeout);
     });
   });
 
-  it('should not index a document of same schema, if model has not been registered before', function(done) {
+  it('should index a populated mongoose document when it has been saved', (done) => {
+
+    const newCandy = new CandyModel({name: 'Chocolate ball', sugarAmount: 123});
+    const newCat = new CatModel({
+      name: 'Bob',
+      color: 'black',
+      hobbies: [{
+        likes: 12,
+        activity: 'jumping'
+      }],
+      candy: newCandy._id
+    });
+
+    newCat.save((err, doc) => {
+
+      if(err) {
+        return done(err, null);
+      }
+
+      setTimeout(() => {
+
+        const type = doc.constructor.modelName;
+        return expect(elasticsearch.getDoc(doc.id, type, testIndex))
+          .to.eventually.be.fulfilled
+          .then((res) => {
+
+            expect(res._index).to.deep.equal(testIndex);
+            expect(res._id).to.deep.equal(newCat.id);
+            expect(res._type).to.deep.equal(newCat.constructor.modelName);
+            expect(res._source._id).to.deep.equal(newCat.id);
+            expect(res._source.name).to.deep.equal(newCat.name);
+            expect(res._source.color).to.deep.equal(undefined);
+            expect(res._source.hobbies[0].likes).to.deep.equal(12);
+            expect(res._source.hobbies[0].activity).to.deep.equal(undefined);
+            expect(res._source.candy.name).to.deep.equal(newCandy.name);
+            expect(res._source.candy.sugarAmount).to.deep.equal(undefined);
+
+            return done();
+          })
+          .catch(done);
+
+      }, elasticsearchTimeout);
+    });
+  });
+
+  it('should not index a document of same schema, if model has not been registered before', (done) => {
 
     const newSuperCat = new SuperCatModel({name: 'Jenny'});
 
@@ -256,7 +330,7 @@ describe('Plugin - Index document', function() {
  */
 describe('Plugin - Remove document', () => {
 
-  before(function(done) {
+  before((done) => {
 
     elasticsearch.ensureDeleteIndex(testIndex)
       .then(() => done())
@@ -264,11 +338,11 @@ describe('Plugin - Remove document', () => {
   });
 
 
-  it('should delete a mongoose document from Elasticsearch when it has been removed', function(done) {
+  it('should delete a mongoose document from Elasticsearch when it has been removed', (done) => {
 
     const newCat = new CatModel({name: 'Jeff', hobby: 'woof'});
 
-    newCat.save(function(err, doc) {
+    newCat.save((err, doc) => {
 
       if(err) {
         return done(err, null);
@@ -300,11 +374,11 @@ describe('Plugin - Remove document', () => {
     });
   });
 
-  it('should not attempt to delete a mongoose document from unregistered models', function(done) {
+  it('should not attempt to delete a mongoose document from unregistered models', (done) => {
 
     const newSuperCat = new SuperCatModel({name: 'Bing', hobby: 'swoosh'});
 
-    newSuperCat.save(function(err, doc) {
+    newSuperCat.save((err, doc) => {
 
       if(err) {
         return done(err, null);
