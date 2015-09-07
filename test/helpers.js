@@ -4,7 +4,7 @@ const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 const mongoose = require('mongoose');
 const helpers = require('../lib/helpers');
-const errors = require('../lib/errors');
+//const errors = require('../lib/errors');
 
 const expect = chai.expect;
 chai.use(chaiAsPromised);
@@ -25,8 +25,26 @@ const FoodSchema = new mongoose.Schema({
       }
     }
   },
+  ingredients: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Ingredient'
+  }],
   proteinAmount: {
     type: Number
+  }
+});
+
+const IngredientSchema = new mongoose.Schema({
+  stockLevel: {
+    type: Number,
+    elasticsearch: {
+      mapping: {
+        type: 'integer'
+      }
+    }
+  },
+  taste: {
+    type: String
   }
 });
 
@@ -54,8 +72,7 @@ const CowSchema = new mongoose.Schema({
       mapping: {
         index: 'not_analyzed',
         type: 'string'
-      },
-      populate: true
+      }
     }
   },
   hobby: {
@@ -65,7 +82,6 @@ const CowSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Food',
     elasticsearch: {
-      populate: true
     }
   },
   favoriteSongs: [MusicSchema]
@@ -74,6 +90,7 @@ const CowSchema = new mongoose.Schema({
 mongoose.model('Music', MusicSchema);
 const CowModel = mongoose.model('Cow', CowSchema);
 const FoodModel = mongoose.model('Food', FoodSchema);
+const IngredientModel = mongoose.model('Ingredient', IngredientSchema);
 
 /**
  * Get model mapping
@@ -82,7 +99,10 @@ const FoodModel = mongoose.model('Food', FoodSchema);
  */
 describe('Helpers - Get model mapping', function() {
 
-  const newFood = new FoodModel({name: 'grass', proteinAmount: 2});
+  /*
+  const newIngredient = new IngredientModel({stockLevel: 12, taste: 'yummy'});
+  const newFood = new FoodModel({name: 'grass', proteinAmount: 2, ingredients: [newIngredient._id]});
+
   const newCow = new CowModel({
     name: 'Bob',
     food: newFood._id,
@@ -96,21 +116,46 @@ describe('Helpers - Get model mapping', function() {
         artist: 'Scooter'
       }]
   });
+  */
 
-  //console.log(newFood);
-  //console.log(newCow);
-  //console.log(helpers.getModelMapping(CowModel));
-  //console.log(helpers.getModelMapping(MusicModel));
+  const expectedMapping = {
+    properties: {
+      name: {
+        type: 'string',
+        index: 'not_analyzed'
+      },
+      food: {
+        properties: {
+          name: {
+            type: 'string',
+            index: 'not_analyzed'
+          },
+          ingredients: {
+            properties: {
+              stockLevel: {
+                type: 'integer'
+              }
+            }
+          }
+        }
+      },
+      favoriteSongs: {
+        properties: {
+          genre: {
+            type: 'string',
+            index: 'not_analyzed'
+          }
+        }
+      }
+    }
+  };
 
-  it('should throw InvalidArgument error if supplied model argument is not a mongoose model', () => {
-
-    const notValidModel = {notValid: 'model'};
-    expect(() => helpers.getModelMapping(notValidModel))
-      .to.throw(errors.InvalidArgumentError);
-  });
+  const populationModels = new Map();
+  populationModels.set(FoodModel.modelName, FoodModel);
+  populationModels.set(IngredientModel.modelName, IngredientModel);
 
   it('should create mappings', () => {
-    expect(() => helpers.getModelMapping(CowModel))
-      .to.not.throw();
+    return expect(helpers.renderMapping(CowModel.schema, populationModels))
+      .to.deep.equal(expectedMapping);
   });
 });

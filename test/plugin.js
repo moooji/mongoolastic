@@ -100,7 +100,7 @@ function onConnectionError(err) {
 }
 
 function onConnectionOpen() {
-  return done();
+  //...
 }
 
 mongoose.connection.on('error', onConnectionError);
