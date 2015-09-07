@@ -71,7 +71,7 @@ const CowSchema = new mongoose.Schema({
   favoriteSongs: [MusicSchema]
 });
 
-const MusicModel = mongoose.model('Music', MusicSchema);
+mongoose.model('Music', MusicSchema);
 const CowModel = mongoose.model('Cow', CowSchema);
 const FoodModel = mongoose.model('Food', FoodSchema);
 
@@ -103,7 +103,9 @@ describe('Helpers - Get model mapping', function() {
   //console.log(helpers.getModelMapping(MusicModel));
 
   it('should throw InvalidArgument error if supplied model argument is not a mongoose model', () => {
-    expect(() => helpers.getModelMapping({notValid: 'model'}))
+
+    const notValidModel = {notValid: 'model'};
+    expect(() => helpers.getModelMapping(notValidModel))
       .to.throw(errors.InvalidArgumentError);
   });
 

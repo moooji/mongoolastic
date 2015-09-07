@@ -95,28 +95,25 @@ const connectionString = 'mongodb://localhost:27017/mongoolastic-test';
 const connectionOptions = { server: { auto_reconnect: true }};
 
 
+function onConnectionError(err) {
+  throw err;
+}
+
+function onConnectionOpen() {
+  return done();
+}
+
+mongoose.connection.on('error', onConnectionError);
+mongoose.connection.once('open', onConnectionOpen);
+mongoose.connect(connectionString, connectionOptions);
+
+
 /**
  * Register plugin
  *
  *
  */
 describe('Plugin - Register model', function() {
-
-  before(function(done){
-
-    function onConnectionError(err) {
-      throw err;
-    }
-
-    function onConnectionOpen() {
-      return done();
-    }
-
-    mongoose.connection.on('error', onConnectionError);
-    mongoose.connection.once('open', onConnectionOpen);
-    mongoose.connect(connectionString, connectionOptions);
-
-  });
 
   it('should register the CatModel and update mappings', function() {
 
@@ -143,25 +140,9 @@ describe('Plugin - Register model', function() {
  */
 describe('Plugin - Register population', function() {
 
-  before(function(done){
-
-    function onConnectionError(err) {
-      throw err;
-    }
-
-    function onConnectionOpen() {
-      return done();
-    }
-
-    mongoose.connection.on('error', onConnectionError);
-    mongoose.connection.once('open', onConnectionOpen);
-    mongoose.connect(connectionString, connectionOptions);
-
-  });
-
   it('should register the a model for population', function() {
 
-    return expect(plugin.registerModel(FoodModel))
+    return expect(plugin.registerPopulation(CandyModel))
       .to.eventually.be.fulfilled
       .then(() => {
 
