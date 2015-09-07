@@ -31,6 +31,10 @@ const CatSchema = new mongoose.Schema({
   },
   hobby: {
     type: String
+  },
+  candy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Candy'
   }
 });
 
@@ -45,9 +49,27 @@ const DogSchema = new mongoose.Schema({
   }
 });
 
+const CandySchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    elasticsearch: {
+      mapping: {
+        index: 'not_analyzed',
+        type: 'string'
+      }
+    }
+  },
+  sugarAmount: {
+    type: Number
+  }
+});
+
 const CatModel = mongoose.model('Cat', CatSchema);
 const SuperCatModel = mongoose.model('SuperCat', CatSchema);
 const DogModel = mongoose.model('Dog', DogSchema);
+const CandyModel = mongoose.model('Candy', CandySchema);
+
 
 const testIndex = 'mongoolastic-test-plugin';
 const testIndexSettings = {
@@ -78,7 +100,7 @@ const connectionOptions = { server: { auto_reconnect: true }};
  *
  *
  */
-describe('Plugin - Register', function() {
+describe('Plugin - Register model', function() {
 
   before(function(done){
 
@@ -110,6 +132,41 @@ describe('Plugin - Register', function() {
 
     return expect(plugin.registerModel(DogModel))
       .to.eventually.be.fulfilled;
+  });
+});
+
+
+/**
+ * Register population
+ *
+ *
+ */
+describe('Plugin - Register population', function() {
+
+  before(function(done){
+
+    function onConnectionError(err) {
+      throw err;
+    }
+
+    function onConnectionOpen() {
+      return done();
+    }
+
+    mongoose.connection.on('error', onConnectionError);
+    mongoose.connection.once('open', onConnectionOpen);
+    mongoose.connect(connectionString, connectionOptions);
+
+  });
+
+  it('should register the a model for population', function() {
+
+    return expect(plugin.registerModel(FoodModel))
+      .to.eventually.be.fulfilled
+      .then(() => {
+
+        console.log(plugin.getMappings());
+      });
   });
 });
 
