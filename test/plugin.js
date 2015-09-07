@@ -53,6 +53,21 @@ const CatSchema = new mongoose.Schema({
   }
 });
 
+const ColorSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  lightness: {
+    type: Number,
+    elasticsearch: {
+      mapping: {
+        type: 'integer'
+      }
+    }
+  }
+});
+
 const CandySchema = new mongoose.Schema({
   name: {
     type: String,
@@ -66,12 +81,17 @@ const CandySchema = new mongoose.Schema({
   },
   sugarAmount: {
     type: Number
+  },
+  wrappingColor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Color'
   }
 });
 
 const CatModel = mongoose.model('Cat', CatSchema);
 const SuperCatModel = mongoose.model('SuperCat', CatSchema);
 const CandyModel = mongoose.model('Candy', CandySchema);
+const ColorModel = mongoose.model('Color', ColorSchema);
 
 const testIndex = 'mongoolastic-test-plugin';
 const testIndexSettings = {
@@ -157,7 +177,7 @@ describe('Plugin - Register population', function() {
 
   it('should register a population model and update mappings', function() {
 
-    const expectedMappings = {
+    const expectedMappingsCandy = {
       Cat: {
         properties: {
           name: {
@@ -183,12 +203,53 @@ describe('Plugin - Register population', function() {
       }
     };
 
+    const expectedMappingsColor = {
+      Cat: {
+        properties: {
+          name: {
+            type: 'string',
+            index: 'not_analyzed'
+          },
+          hobbies: {
+            properties: {
+              likes: {
+                type: 'long'
+              }
+            }
+          },
+          candy: {
+            properties: {
+              name: {
+                index: 'not_analyzed',
+                type: 'string'
+              },
+              wrappingColor: {
+                properties: {
+                  lightness: {
+                    type: 'integer'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    };
+
     return expect(plugin.registerPopulation(CandyModel))
       .to.eventually.be.fulfilled
       .then(() => {
 
-        return expect(plugin.getMappings())
-          .to.deep.equal(expectedMappings);
+        expect(plugin.getMappings())
+          .to.deep.equal(expectedMappingsCandy);
+
+        return expect(plugin.registerPopulation(ColorModel))
+          .to.eventually.be.fulfilled
+          .then(() => {
+
+            return expect(plugin.getMappings())
+              .to.deep.equal(expectedMappingsColor);
+        });
       });
   });
 });
@@ -305,7 +366,13 @@ describe('Plugin - Index document', function() {
 
   it('should index a populated mongoose document when it has been saved', (done) => {
 
-    const newCandy = new CandyModel({name: 'Chocolate ball', sugarAmount: 123});
+    const newColor = new ColorModel({name: 'blue', lightness: 128});
+    const newCandy = new CandyModel({
+      name: 'Chocolate ball',
+      sugarAmount: 123,
+      wrappingColor: newColor._id
+    });
+
     const newCat = new CatModel({
       name: 'Bob',
       color: 'black',
@@ -316,35 +383,51 @@ describe('Plugin - Index document', function() {
       candy: newCandy._id
     });
 
-    newCat.save((err, doc) => {
+    newColor.save((err) => {
 
       if(err) {
         return done(err, null);
       }
 
-      setTimeout(() => {
+      newCandy.save((err) => {
 
-        const type = doc.constructor.modelName;
-        return expect(elasticsearch.getDoc(doc.id, type, testIndex))
-          .to.eventually.be.fulfilled
-          .then((res) => {
+        if(err) {
+          return done(err, null);
+        }
 
-            expect(res._index).to.deep.equal(testIndex);
-            expect(res._id).to.deep.equal(newCat.id);
-            expect(res._type).to.deep.equal(newCat.constructor.modelName);
-            expect(res._source._id).to.deep.equal(newCat.id);
-            expect(res._source.name).to.deep.equal(newCat.name);
-            expect(res._source.color).to.deep.equal(undefined);
-            expect(res._source.hobbies[0].likes).to.deep.equal(12);
-            expect(res._source.hobbies[0].activity).to.deep.equal(undefined);
-            expect(res._source.candy.name).to.deep.equal(newCandy.name);
-            expect(res._source.candy.sugarAmount).to.deep.equal(undefined);
+        newCat.save((err, doc) => {
 
-            return done();
-          })
-          .catch(done);
+          if(err) {
+            return done(err, null);
+          }
 
-      }, elasticsearchTimeout);
+          setTimeout(() => {
+
+            const type = doc.constructor.modelName;
+            return expect(elasticsearch.getDoc(doc.id, type, testIndex))
+              .to.eventually.be.fulfilled
+              .then((res) => {
+
+                expect(res._index).to.deep.equal(testIndex);
+                expect(res._id).to.deep.equal(newCat.id);
+                expect(res._type).to.deep.equal(newCat.constructor.modelName);
+                expect(res._source._id).to.deep.equal(newCat.id);
+                expect(res._source.name).to.deep.equal(newCat.name);
+                expect(res._source.color).to.deep.equal(undefined);
+                expect(res._source.hobbies[0].likes).to.deep.equal(12);
+                expect(res._source.hobbies[0].activity).to.deep.equal(undefined);
+                expect(res._source.candy.name).to.deep.equal(newCandy.name);
+                expect(res._source.candy.sugarAmount).to.deep.equal(undefined);
+                expect(res._source.candy.wrappingColor.name).to.deep.equal(undefined);
+                expect(res._source.candy.wrappingColor.lightness).to.deep.equal(128);
+
+                return done();
+              })
+              .catch(done);
+
+          }, elasticsearchTimeout);
+        });
+      });
     });
   });
 
