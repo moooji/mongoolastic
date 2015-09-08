@@ -161,6 +161,7 @@ describe('Plugin - Register model', function() {
       .to.eventually.be.fulfilled
       .then(() => {
 
+        console.log(plugin.getMappings());
         return expect(plugin.getMappings())
           .to.deep.equal(expectedMappings);
       });
@@ -359,7 +360,6 @@ describe('Plugin - Index document', function() {
             expect(res._index).to.deep.equal(testIndex);
             expect(res._id).to.deep.equal(newCat.id);
             expect(res._type).to.deep.equal(newCat.constructor.modelName);
-            expect(res._source._id).to.deep.equal(newCat.id);
             expect(res._source.name).to.deep.equal(newCat.name);
             expect(res._source.hobbies).to.deep.equal([]);
 
@@ -418,7 +418,6 @@ describe('Plugin - Index document', function() {
                 expect(res._index).to.deep.equal(testIndex);
                 expect(res._id).to.deep.equal(newCat.id);
                 expect(res._type).to.deep.equal(newCat.constructor.modelName);
-                expect(res._source._id).to.deep.equal(newCat.id);
                 expect(res._source.name).to.deep.equal(newCat.name);
                 expect(res._source.color).to.deep.equal(undefined);
                 expect(res._source.hobbies[0].likes).to.deep.equal(12);

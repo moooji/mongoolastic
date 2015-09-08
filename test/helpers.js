@@ -203,3 +203,34 @@ describe('Helpers - Render population tree', function() {
       .to.deep.equal(expected);
   });
 });
+
+
+/**
+ * Render index tree
+ *
+ *
+ */
+describe('Helpers - Render index paths', function() {
+
+  const expected = [
+    'name',
+    'food.name',
+    'food.ingredients.stockLevel',
+    'favoriteSongs.genre'
+  ];
+
+  const populationModels = new Map();
+  populationModels.set(FoodModel.modelName, FoodModel);
+  populationModels.set(IngredientModel.modelName, IngredientModel);
+
+  it('should throw InvalidArgumentError if supplied schema is not valid mongoose schema', () => {
+    return expect(() => helpers.renderIndexPaths({notValid: true}, populationModels))
+      .to.throw(errors.InvalidArgumentError);
+  });
+
+  it('should render index tree with population and sub documents', () => {
+
+    return expect(helpers.renderIndexPaths(CowModel.schema, populationModels))
+      .to.deep.equal(expected);
+  });
+});
