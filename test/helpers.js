@@ -97,7 +97,7 @@ const IngredientModel = mongoose.model('Ingredient', IngredientSchema);
  *
  *
  */
-describe('Helpers - Get model mapping', function() {
+describe('Helpers - Parse schema', function() {
 
   /*
   const newIngredient = new IngredientModel({stockLevel: 12, taste: 'yummy'});
@@ -118,32 +118,34 @@ describe('Helpers - Get model mapping', function() {
   });
   */
 
-  const expectedMapping = {
-    properties: {
-      name: {
-        type: 'string',
-        index: 'not_analyzed'
-      },
-      food: {
-        properties: {
-          name: {
-            type: 'string',
-            index: 'not_analyzed'
-          },
-          ingredients: {
-            properties: {
-              stockLevel: {
-                type: 'integer'
+  const expected = {
+    mapping: {
+      properties: {
+        name: {
+          type: 'string',
+          index: 'not_analyzed'
+        },
+        food: {
+          properties: {
+            name: {
+              type: 'string',
+              index: 'not_analyzed'
+            },
+            ingredients: {
+              properties: {
+                stockLevel: {
+                  type: 'integer'
+                }
               }
             }
           }
-        }
-      },
-      favoriteSongs: {
-        properties: {
-          genre: {
-            type: 'string',
-            index: 'not_analyzed'
+        },
+        favoriteSongs: {
+          properties: {
+            genre: {
+              type: 'string',
+              index: 'not_analyzed'
+            }
           }
         }
       }
@@ -155,12 +157,12 @@ describe('Helpers - Get model mapping', function() {
   populationModels.set(IngredientModel.modelName, IngredientModel);
 
   it('should throw InvalidArgumentError if supplied schema is not valid mongoose schema', () => {
-    return expect(() => helpers.renderMapping({notValid: true}, populationModels))
+    return expect(() => helpers.parseSchema({notValid: true}, populationModels))
       .to.throw(errors.InvalidArgumentError);
   });
 
-  it('should create mappings', () => {
-    return expect(helpers.renderMapping(CowModel.schema, populationModels))
-      .to.deep.equal(expectedMapping);
+  it('should parse a schema with population and sub documents', () => {
+    return expect(helpers.parseSchema(CowModel.schema, populationModels))
+      .to.deep.equal(expected);
   });
 });
