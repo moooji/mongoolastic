@@ -198,7 +198,6 @@ describe('Helpers - Render population tree', function() {
 
   it('should render population tree with population and sub documents', () => {
 
-    console.log(JSON.stringify(helpers.renderPopulationTree(CowModel.schema, populationModels), null, 2));
     return expect(helpers.renderPopulationTree(CowModel.schema, populationModels))
       .to.deep.equal(expected);
   });

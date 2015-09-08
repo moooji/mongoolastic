@@ -161,7 +161,6 @@ describe('Plugin - Register model', function() {
       .to.eventually.be.fulfilled
       .then(() => {
 
-        console.log(plugin.getMappings());
         return expect(plugin.getMappings())
           .to.deep.equal(expectedMappings);
       });
