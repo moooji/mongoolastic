@@ -93,11 +93,11 @@ const FoodModel = mongoose.model('Food', FoodSchema);
 const IngredientModel = mongoose.model('Ingredient', IngredientSchema);
 
 /**
- * Get model mapping
+ * Render model mapping
  *
  *
  */
-describe('Helpers - Parse schema', function() {
+describe('Helpers - Render mapping', function() {
 
   /*
   const newIngredient = new IngredientModel({stockLevel: 12, taste: 'yummy'});
@@ -119,33 +119,31 @@ describe('Helpers - Parse schema', function() {
   */
 
   const expected = {
-    mapping: {
-      properties: {
-        name: {
-          type: 'string',
-          index: 'not_analyzed'
-        },
-        food: {
-          properties: {
-            name: {
-              type: 'string',
-              index: 'not_analyzed'
-            },
-            ingredients: {
-              properties: {
-                stockLevel: {
-                  type: 'integer'
-                }
+    properties: {
+      name: {
+        type: 'string',
+        index: 'not_analyzed'
+      },
+      food: {
+        properties: {
+          name: {
+            type: 'string',
+            index: 'not_analyzed'
+          },
+          ingredients: {
+            properties: {
+              stockLevel: {
+                type: 'integer'
               }
             }
           }
-        },
-        favoriteSongs: {
-          properties: {
-            genre: {
-              type: 'string',
-              index: 'not_analyzed'
-            }
+        }
+      },
+      favoriteSongs: {
+        properties: {
+          genre: {
+            type: 'string',
+            index: 'not_analyzed'
           }
         }
       }
@@ -157,12 +155,51 @@ describe('Helpers - Parse schema', function() {
   populationModels.set(IngredientModel.modelName, IngredientModel);
 
   it('should throw InvalidArgumentError if supplied schema is not valid mongoose schema', () => {
-    return expect(() => helpers.parseSchema({notValid: true}, populationModels))
+    return expect(() => helpers.renderMapping({notValid: true}, populationModels))
       .to.throw(errors.InvalidArgumentError);
   });
 
   it('should parse a schema with population and sub documents', () => {
-    return expect(helpers.parseSchema(CowModel.schema, populationModels))
+    return expect(helpers.renderMapping(CowModel.schema, populationModels))
+      .to.deep.equal(expected);
+  });
+});
+
+/**
+ * Render model population tree
+ *
+ *
+ */
+describe('Helpers - Render population tree', function() {
+
+  const expected = {
+    food: {
+      fields: [
+        'name', 'ingredients'
+      ],
+      paths: {
+        ingredients: {
+          fields: [
+            'stockLevel'
+          ]
+        }
+      }
+    }
+  };
+
+  const populationModels = new Map();
+  populationModels.set(FoodModel.modelName, FoodModel);
+  populationModels.set(IngredientModel.modelName, IngredientModel);
+
+  it('should throw InvalidArgumentError if supplied schema is not valid mongoose schema', () => {
+    return expect(() => helpers.renderPopulationTree({notValid: true}, populationModels))
+      .to.throw(errors.InvalidArgumentError);
+  });
+
+  it('should render population tree with population and sub documents', () => {
+
+    console.log(JSON.stringify(helpers.renderPopulationTree(CowModel.schema, populationModels), null, 2));
+    return expect(helpers.renderPopulationTree(CowModel.schema, populationModels))
       .to.deep.equal(expected);
   });
 });

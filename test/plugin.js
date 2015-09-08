@@ -290,6 +290,13 @@ describe('Plugin - Connect', function() {
               name: {
                 index: 'not_analyzed',
                 type: 'string'
+              },
+              wrappingColor: {
+                properties: {
+                  lightness: {
+                    type: 'integer'
+                  }
+                }
               }
             }
           }
