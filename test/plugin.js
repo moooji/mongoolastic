@@ -17,6 +17,7 @@ const elasticsearchTimeout = 100;
  * Test data
  *
  */
+
 const HobbySchema = new mongoose.Schema({
   likes: {
     type: Number,
@@ -113,9 +114,9 @@ const testIndexSettings = {
  *
  *
  */
-const connectionString = 'mongodb://localhost:27017/mongoolastic-test';
-const connectionOptions = { server: { auto_reconnect: true }};
 
+const connectionString = 'mongodb://localhost:27017/mongoolastic-test';
+const connectionOptions = {server: {auto_reconnect: true}};
 
 function onConnectionError(err) {
   throw err;
@@ -129,33 +130,39 @@ mongoose.connection.on('error', onConnectionError);
 mongoose.connection.once('open', onConnectionOpen);
 mongoose.connect(connectionString, connectionOptions);
 
-
 /**
  * Register plugin
  *
  *
  */
+
 describe('Plugin - Register model', function() {
 
-  it('should register a model and update mappings', function() {
+  // Errors
+  it('should throw InvalidArgumentError if transform function is not valid', () => {
 
-    const expectedMappings = {
-      Cat: {
-        properties: {
-          name: {
-            type: 'string',
-            index: 'not_analyzed'
-          },
-          hobbies: {
-            properties: {
-              likes: {
-                type: 'long'
-              }
-            }
-          }
-        }
-      }
-    };
+    const transform = 123;
+    return expect(plugin.registerModel(CatModel, {transform}))
+      .to.be.rejectedWith(errors.InvalidArgumentError);
+  });
+
+  it('should throw InvalidArgumentError if mapping is not valid', () => {
+
+    const mapping = 123;
+    return expect(plugin.registerModel(CatModel, {mapping}))
+      .to.be.rejectedWith(errors.InvalidArgumentError);
+  });
+
+  it('should throw InvalidArgumentError if model is not valid', () => {
+
+    const model = 123;
+    return expect(plugin.registerModel(model))
+      .to.be.rejectedWith(errors.InvalidArgumentError);
+  });
+
+  it('should register a model without mapping and transform function', () => {
+
+    const expectedMappings = {};
 
     return expect(plugin.registerModel(CatModel))
       .to.eventually.be.fulfilled
@@ -165,37 +172,32 @@ describe('Plugin - Register model', function() {
           .to.deep.equal(expectedMappings);
       });
   });
-});
 
+  it('should register a model with mapping and transform function', () => {
 
-/**
- * Register population
- *
- *
- */
-describe('Plugin - Register population', function() {
-
-  it('should register a population model and update mappings', function() {
-
-    const expectedMappingsCandy = {
-      Cat: {
+    const transform = (doc) => doc;
+    const mapping = {
+      name: {
+        type: 'string',
+        index: 'not_analyzed'
+      },
+      hobbies: {
+        properties: {
+          likes: {
+            type: 'long'
+          }
+        }
+      },
+      candy: {
         properties: {
           name: {
-            type: 'string',
-            index: 'not_analyzed'
+            index: 'not_analyzed',
+            type: 'string'
           },
-          hobbies: {
+          wrappingColor: {
             properties: {
-              likes: {
-                type: 'long'
-              }
-            }
-          },
-          candy: {
-            properties: {
-              name: {
-                index: 'not_analyzed',
-                type: 'string'
+              lightness: {
+                type: 'integer'
               }
             }
           }
@@ -203,7 +205,7 @@ describe('Plugin - Register population', function() {
       }
     };
 
-    const expectedMappingsColor = {
+    const expectedMappings = {
       Cat: {
         properties: {
           name: {
@@ -236,30 +238,22 @@ describe('Plugin - Register population', function() {
       }
     };
 
-    return expect(plugin.registerPopulation(CandyModel))
+    return expect(plugin.registerModel(CatModel, {transform, mapping}))
       .to.eventually.be.fulfilled
       .then(() => {
 
-        expect(plugin.getMappings())
-          .to.deep.equal(expectedMappingsCandy);
-
-        return expect(plugin.registerPopulation(ColorModel))
-          .to.eventually.be.fulfilled
-          .then(() => {
-
-            return expect(plugin.getMappings())
-              .to.deep.equal(expectedMappingsColor);
-        });
+        return expect(plugin.getMappings())
+          .to.deep.equal(expectedMappings);
       });
   });
 });
-
 
 /**
  * Connect
  *
  *
  */
+
 describe('Plugin - Connect', function() {
 
   before((done) => {
@@ -304,13 +298,18 @@ describe('Plugin - Connect', function() {
       }
     };
 
-    return expect(plugin.connect(host, testIndex, testIndexSettings))
+    return expect(plugin.connect(host, testIndex, {settings: testIndexSettings}))
       .to.eventually.be.fulfilled
       .then(() => {
 
         return expect(elasticsearch.getIndexSettings(testIndex))
           .to.eventually.be.fulfilled
-          .then(() => {
+          .then((res) => {
+
+            expect(res).to.have.property(testIndex);
+            expect(res[testIndex]).to.have.property('settings');
+            expect(res[testIndex].settings.index.analysis)
+              .to.deep.equal(testIndexSettings.index.analysis);
 
             return expect(elasticsearch.getIndexMapping(testIndex, CatModel.modelName))
               .to.eventually.be.fulfilled
@@ -324,12 +323,12 @@ describe('Plugin - Connect', function() {
   });
 });
 
-
 /**
  * Index document
  *
  *
  */
+
 describe('Plugin - Index document', function() {
 
   before((done) => {
@@ -345,7 +344,7 @@ describe('Plugin - Index document', function() {
 
     newCat.save((err, doc) => {
 
-      if(err) {
+      if (err) {
         return done(err, null);
       }
 
@@ -391,19 +390,19 @@ describe('Plugin - Index document', function() {
 
     newColor.save((err) => {
 
-      if(err) {
+      if (err) {
         return done(err, null);
       }
 
       newCandy.save((err) => {
 
-        if(err) {
+        if (err) {
           return done(err, null);
         }
 
         newCat.save((err, doc) => {
 
-          if(err) {
+          if (err) {
             return done(err, null);
           }
 
@@ -436,7 +435,7 @@ describe('Plugin - Index document', function() {
     });
   });
 
-  it('should not index a document of same schema, if model has not been registered before', (done) => {
+  it('should not index a document of same schema, if model is not registered', (done) => {
 
     const newSuperCat = new SuperCatModel({name: 'Jenny'});
 
@@ -458,12 +457,12 @@ describe('Plugin - Index document', function() {
   });
 });
 
-
 /**
  * Remove document
  *
  *
  */
+
 describe('Plugin - Remove document', () => {
 
   before((done) => {
@@ -473,14 +472,13 @@ describe('Plugin - Remove document', () => {
       .catch(done);
   });
 
-
   it('should delete a mongoose document from Elasticsearch when it has been removed', (done) => {
 
     const newCat = new CatModel({name: 'Jeff', hobby: 'woof'});
 
     newCat.save((err, doc) => {
 
-      if(err) {
+      if (err) {
         return done(err, null);
       }
 
@@ -493,7 +491,7 @@ describe('Plugin - Remove document', () => {
 
             newCat.remove((err) => {
 
-              if(err) {
+              if (err) {
                 return done(err, null);
               }
 
@@ -516,7 +514,7 @@ describe('Plugin - Remove document', () => {
 
     newSuperCat.save((err, doc) => {
 
-      if(err) {
+      if (err) {
         return done(err, null);
       }
 
@@ -531,7 +529,7 @@ describe('Plugin - Remove document', () => {
 
             newSuperCat.remove((err) => {
 
-              if(err) {
+              if (err) {
                 return done(err, null);
               }
 
@@ -548,5 +546,3 @@ describe('Plugin - Remove document', () => {
     });
   });
 });
-
-

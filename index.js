@@ -1,4 +1,4 @@
 'use strict';
 
-var mongoolastic = require('./lib/plugin');
-module.exports = new mongoolastic();
+const Mongoolastic = require('./lib/plugin');
+module.exports = new Mongoolastic();

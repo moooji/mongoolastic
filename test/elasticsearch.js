@@ -91,12 +91,11 @@ const idTests = [
 describe('Elasticsearch - Connection', () => {
 
   it('should create a connection', () => {
-    
+
     return expect(elasticsearch.connect(host))
       .to.eventually.be.fulfilled;
   });
 });
-
 
 describe('Elasticsearch - Validation', () => {
 
@@ -119,7 +118,7 @@ describe('Elasticsearch - Validation', () => {
   it('should check if mappings are valid', () => {
 
     mappingsTests.forEach((test) => {
-      expect(elasticsearch.isValidMappings(test.mappings))
+      expect(elasticsearch.isValidMapping(test.mappings))
         .to.equal(test.isValid);
     });
   });
@@ -140,7 +139,6 @@ describe('Elasticsearch - Validation', () => {
     });
   });
 });
-
 
 describe('Elasticsearch - Ensure index', () => {
 
@@ -272,7 +270,7 @@ describe('Elasticsearch - Delete index', () => {
     // Delete the index
     return expect(elasticsearch.deleteIndex(testIndices))
       .to.eventually.be.fulfilled
-      .then(() =>{
+      .then(() => {
         return testIndices;
       })
       .map(function(index) {
@@ -289,11 +287,11 @@ describe('Elasticsearch - Delete index', () => {
   });
 });
 
-
 /**
  * Ensure delete index
  *
  */
+
 describe('Elasticsearch - Ensure delete index', () => {
 
   let testIndices = [
@@ -351,6 +349,7 @@ describe('Elasticsearch - Ensure delete index', () => {
  * Get index mapping
  *
  */
+
 describe('Elasticsearch - Get index mapping', () => {
 
   const testIndex = 'mongoolastic-test-get-index-mapping';
@@ -402,11 +401,11 @@ describe('Elasticsearch - Get index mapping', () => {
   });
 });
 
-
 /**
  * Get index settings
  *
  */
+
 describe('Elasticsearch - Get index settings', () => {
 
   const testIndex = 'mongoolastic-test-get-index-settings';
@@ -459,12 +458,12 @@ describe('Elasticsearch - Get index settings', () => {
   });
 });
 
-
 /**
  * Index document
  *
  *
  */
+
 describe('Elasticsearch - Index document', () => {
 
   const testIndex = 'mongoolastic-test-index-document';
@@ -482,7 +481,6 @@ describe('Elasticsearch - Index document', () => {
       }
     }
   };
-
 
   before((done) => {
 
@@ -550,6 +548,7 @@ describe('Elasticsearch - Index document', () => {
  * Delete document
  *
  */
+
 describe('Elasticsearch - Delete document', () => {
 
   const testIndex = 'mongoolastic-test-delete-document';
@@ -566,7 +565,6 @@ describe('Elasticsearch - Delete document', () => {
       }
     }
   };
-
 
   before((done) => {
 
@@ -615,11 +613,11 @@ describe('Elasticsearch - Delete document', () => {
   });
 });
 
-
 /**
  * Get document
  *
  */
+
 describe('Elasticsearch - Get document', () => {
 
   const testIndex = 'mongoolastic-test-get-document';
@@ -679,12 +677,12 @@ describe('Elasticsearch - Get document', () => {
   });
 });
 
-
 /**
  * Search
  *
  *
  */
+
 describe('Elasticsearch - Search', () => {
 
   const testIndex = 'mongoolastic-test-search';
@@ -708,7 +706,6 @@ describe('Elasticsearch - Search', () => {
       'query': 'Bob'
     }
   };
-
 
   before((done) => {
 
