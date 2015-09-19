@@ -18,6 +18,22 @@ const elasticsearchTimeout = 100;
  *
  */
 
+const CatSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    elasticsearch: {
+      mapping: {
+        index: 'not_analyzed',
+        type: 'string'
+      }
+    }
+  },
+  color: {
+    type: String
+  }
+});
+
 const HobbySchema = new mongoose.Schema({
   likes: {
     type: Number,
@@ -33,7 +49,7 @@ const HobbySchema = new mongoose.Schema({
   }
 });
 
-const CatSchema = new mongoose.Schema({
+const DogSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
@@ -89,10 +105,11 @@ const CandySchema = new mongoose.Schema({
   }
 });
 
-const CatModel = mongoose.model('Cat', CatSchema);
-const SuperCatModel = mongoose.model('SuperCat', CatSchema);
+const DogModel = mongoose.model('Dog', DogSchema);
 const CandyModel = mongoose.model('Candy', CandySchema);
 const ColorModel = mongoose.model('Color', ColorSchema);
+const CatModel = mongoose.model('Cat', CatSchema);
+const SuperCatModel = mongoose.model('SuperCat', CatSchema);
 
 const testIndex = 'mongoolastic-test-plugin';
 const testIndexSettings = {
@@ -175,7 +192,20 @@ describe('Plugin - Register model', function() {
 
   it('should register a model with mapping and transform function', () => {
 
-    const transform = (doc) => doc;
+    const transform = (doc, done) => {
+
+      doc.populate('candy', (err, doc) => {
+
+        if (err) {
+          return done(err);
+        }
+
+        doc.candy.populate('wrappingColor', (err) => {
+          return done(err, doc);
+        });
+      });
+    };
+
     const mapping = {
       name: {
         type: 'string',
@@ -206,7 +236,7 @@ describe('Plugin - Register model', function() {
     };
 
     const expectedMappings = {
-      Cat: {
+      Dog: {
         properties: {
           name: {
             type: 'string',
@@ -238,7 +268,7 @@ describe('Plugin - Register model', function() {
       }
     };
 
-    return expect(plugin.registerModel(CatModel, {transform, mapping}))
+    return expect(plugin.registerModel(DogModel, {transform, mapping}))
       .to.eventually.be.fulfilled
       .then(() => {
 
@@ -263,10 +293,28 @@ describe('Plugin - Connect', function() {
       .catch(done);
   });
 
+  it('should throw InvalidArgumentError if host is not valid', () => {
+
+    return expect(plugin.connect(123, testIndex))
+      .to.be.rejectedWith(errors.InvalidArgumentError);
+  });
+
+  it('should throw InvalidArgumentError if index is not valid', () => {
+
+    return expect(plugin.connect(host, 123))
+      .to.be.rejectedWith(errors.InvalidArgumentError);
+  });
+
+  it('should throw InvalidArgumentError if options are not valid', () => {
+
+    return expect(plugin.connect(host, testIndex, 123))
+      .to.be.rejectedWith(errors.InvalidArgumentError);
+  });
+
   it('should connect to Elasticsearch', function() {
 
     const expectedMappings = {
-      Cat: {
+      Dog: {
         properties: {
           name: {
             type: 'string',
@@ -311,7 +359,7 @@ describe('Plugin - Connect', function() {
             expect(res[testIndex].settings.index.analysis)
               .to.deep.equal(testIndexSettings.index.analysis);
 
-            return expect(elasticsearch.getIndexMapping(testIndex, CatModel.modelName))
+            return expect(elasticsearch.getIndexMapping(testIndex, DogModel.modelName))
               .to.eventually.be.fulfilled
               .then((res) => {
 
@@ -359,7 +407,6 @@ describe('Plugin - Index document', function() {
             expect(res._id).to.deep.equal(newCat.id);
             expect(res._type).to.deep.equal(newCat.constructor.modelName);
             expect(res._source.name).to.deep.equal(newCat.name);
-            expect(res._source.hobbies).to.deep.equal([]);
 
             return done();
           })
@@ -378,7 +425,7 @@ describe('Plugin - Index document', function() {
       wrappingColor: newColor._id
     });
 
-    const newCat = new CatModel({
+    const newDog = new DogModel({
       name: 'Bob',
       color: 'black',
       hobbies: [{
@@ -400,7 +447,7 @@ describe('Plugin - Index document', function() {
           return done(err, null);
         }
 
-        newCat.save((err, doc) => {
+        newDog.save((err, doc) => {
 
           if (err) {
             return done(err, null);
@@ -414,15 +461,15 @@ describe('Plugin - Index document', function() {
               .then((res) => {
 
                 expect(res._index).to.deep.equal(testIndex);
-                expect(res._id).to.deep.equal(newCat.id);
-                expect(res._type).to.deep.equal(newCat.constructor.modelName);
-                expect(res._source.name).to.deep.equal(newCat.name);
-                expect(res._source.color).to.deep.equal(undefined);
+                expect(res._id).to.deep.equal(newDog.id);
+                expect(res._type).to.deep.equal(newDog.constructor.modelName);
+                expect(res._source.name).to.deep.equal(newDog.name);
+                expect(res._source.color).to.deep.equal('black');
                 expect(res._source.hobbies[0].likes).to.deep.equal(12);
-                expect(res._source.hobbies[0].activity).to.deep.equal(undefined);
+                expect(res._source.hobbies[0].activity).to.deep.equal('jumping');
                 expect(res._source.candy.name).to.deep.equal(newCandy.name);
-                expect(res._source.candy.sugarAmount).to.deep.equal(undefined);
-                expect(res._source.candy.wrappingColor.name).to.deep.equal(undefined);
+                expect(res._source.candy.sugarAmount).to.deep.equal(123);
+                expect(res._source.candy.wrappingColor.name).to.deep.equal('blue');
                 expect(res._source.candy.wrappingColor.lightness).to.deep.equal(128);
 
                 return done();
