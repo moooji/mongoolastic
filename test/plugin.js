@@ -7,11 +7,13 @@ const elasticsearch = require('../lib/elasticsearch');
 const plugin = require('../lib/plugin');
 const errors = require('../lib/errors');
 
+const client = elasticsearch.create();
+const clientTimeout = 100;
+
 const expect = chai.expect;
 chai.use(chaiAsPromised);
 
 const host = 'localhost:9200';
-const elasticsearchTimeout = 100;
 
 /**
  * Test data
@@ -21,13 +23,7 @@ const elasticsearchTimeout = 100;
 const CatSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
-    elasticsearch: {
-      mapping: {
-        index: 'not_analyzed',
-        type: 'string'
-      }
-    }
+    required: true
   },
   color: {
     type: String
@@ -37,12 +33,7 @@ const CatSchema = new mongoose.Schema({
 const HobbySchema = new mongoose.Schema({
   likes: {
     type: Number,
-    required: true,
-    elasticsearch: {
-      mapping: {
-        type: 'long'
-      }
-    }
+    required: true
   },
   activity: {
     type: String
@@ -52,13 +43,7 @@ const HobbySchema = new mongoose.Schema({
 const DogSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
-    elasticsearch: {
-      mapping: {
-        index: 'not_analyzed',
-        type: 'string'
-      }
-    }
+    required: true
   },
   color: {
     type: String
@@ -76,25 +61,14 @@ const ColorSchema = new mongoose.Schema({
     required: true
   },
   lightness: {
-    type: Number,
-    elasticsearch: {
-      mapping: {
-        type: 'integer'
-      }
-    }
+    type: Number
   }
 });
 
 const CandySchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
-    elasticsearch: {
-      mapping: {
-        index: 'not_analyzed',
-        type: 'string'
-      }
-    }
+    required: true
   },
   sugarAmount: {
     type: Number
@@ -288,9 +262,13 @@ describe('Plugin - Connect', function() {
 
   before((done) => {
 
-    elasticsearch.ensureDeleteIndex(testIndex)
-      .then(() => done())
-      .catch(done);
+    client.connect(host)
+      .then(() => {
+
+        client.ensureDeleteIndex(testIndex)
+          .then(() => done())
+          .catch(done);
+      });
   });
 
   it('should throw InvalidArgumentError if index is not valid', () => {
@@ -344,7 +322,7 @@ describe('Plugin - Connect', function() {
       .to.eventually.be.fulfilled
       .then(() => {
 
-        return expect(elasticsearch.getIndexSettings(testIndex))
+        return expect(client.getIndexSettings(testIndex))
           .to.eventually.be.fulfilled
           .then((res) => {
 
@@ -353,7 +331,7 @@ describe('Plugin - Connect', function() {
             expect(res[testIndex].settings.index.analysis)
               .to.deep.equal(testIndexSettings.index.analysis);
 
-            return expect(elasticsearch.getIndexMapping(testIndex, DogModel.modelName))
+            return expect(client.getIndexMapping(testIndex, DogModel.modelName))
               .to.eventually.be.fulfilled
               .then((res) => {
 
@@ -375,7 +353,7 @@ describe('Plugin - Index document', function() {
 
   before((done) => {
 
-    elasticsearch.ensureDeleteIndex(testIndex)
+    client.ensureDeleteIndex(testIndex)
       .then(() => done())
       .catch(done);
   });
@@ -393,7 +371,7 @@ describe('Plugin - Index document', function() {
       setTimeout(() => {
 
         const type = doc.constructor.modelName;
-        return expect(elasticsearch.getDoc(doc.id, type, testIndex))
+        return expect(client.getDoc(doc.id, type, testIndex))
           .to.eventually.be.fulfilled
           .then((res) => {
 
@@ -406,7 +384,7 @@ describe('Plugin - Index document', function() {
           })
           .catch(done);
 
-      }, elasticsearchTimeout);
+      }, clientTimeout);
     });
   });
 
@@ -450,7 +428,7 @@ describe('Plugin - Index document', function() {
           setTimeout(() => {
 
             const type = doc.constructor.modelName;
-            return expect(elasticsearch.getDoc(doc.id, type, testIndex))
+            return expect(client.getDoc(doc.id, type, testIndex))
               .to.eventually.be.fulfilled
               .then((res) => {
 
@@ -470,7 +448,7 @@ describe('Plugin - Index document', function() {
               })
               .catch(done);
 
-          }, elasticsearchTimeout);
+          }, clientTimeout);
         });
       });
     });
@@ -489,11 +467,11 @@ describe('Plugin - Index document', function() {
       setTimeout(() => {
 
         const type = doc.constructor.modelName;
-        return expect(elasticsearch.getDoc(doc.id, type, testIndex))
+        return expect(client.getDoc(doc.id, type, testIndex))
           .to.be.rejectedWith(errors.DocumentNotFoundError)
           .then(() => done());
 
-      }, elasticsearchTimeout);
+      }, clientTimeout);
     });
   });
 });
@@ -508,7 +486,7 @@ describe('Plugin - Remove document', () => {
 
   before((done) => {
 
-    elasticsearch.ensureDeleteIndex(testIndex)
+    client.ensureDeleteIndex(testIndex)
       .then(() => done())
       .catch(done);
   });
@@ -526,7 +504,7 @@ describe('Plugin - Remove document', () => {
       setTimeout(() => {
 
         const type = doc.constructor.modelName;
-        return expect(elasticsearch.getDoc(doc.id, type, testIndex))
+        return expect(client.getDoc(doc.id, type, testIndex))
           .to.eventually.be.fulfilled
           .then(() => {
 
@@ -538,14 +516,14 @@ describe('Plugin - Remove document', () => {
 
               setTimeout(() => {
 
-                return expect(elasticsearch.getDoc(doc.id, type, testIndex))
+                return expect(client.getDoc(doc.id, type, testIndex))
                   .to.be.rejectedWith(errors.DocumentNotFoundError)
                   .then(() => done());
-              }, elasticsearchTimeout);
+              }, clientTimeout);
             });
           })
           .catch(done);
-      }, elasticsearchTimeout);
+      }, clientTimeout);
     });
   });
 
@@ -564,7 +542,7 @@ describe('Plugin - Remove document', () => {
       setTimeout(() => {
 
         const type = doc.constructor.modelName;
-        return expect(elasticsearch.getDoc(doc.id, type, testIndex))
+        return expect(client.getDoc(doc.id, type, testIndex))
           .to.be.rejectedWith(errors.DocumentNotFoundError)
           .then(() => {
 
@@ -576,14 +554,14 @@ describe('Plugin - Remove document', () => {
 
               setTimeout(() => {
 
-                return expect(elasticsearch.getDoc(doc.id, type, testIndex))
+                return expect(client.getDoc(doc.id, type, testIndex))
                   .to.be.rejectedWith(errors.DocumentNotFoundError)
                   .then(() => done());
-              }, elasticsearchTimeout);
+              }, clientTimeout);
             });
           })
           .catch(done);
-      }, elasticsearchTimeout);
+      }, clientTimeout);
     });
   });
 });
@@ -598,7 +576,7 @@ describe('Plugin - Sync', function() {
 
   before((done) => {
 
-    elasticsearch.ensureDeleteIndex(testIndex)
+    client.ensureDeleteIndex(testIndex)
       .then(() => done())
       .catch(done);
   });
