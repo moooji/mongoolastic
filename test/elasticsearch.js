@@ -1,6 +1,7 @@
 'use strict';
 
 const _ = require('lodash');
+const Bluebird = require('bluebird');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 const elasticsearch = require('../lib/elasticsearch');
@@ -160,6 +161,24 @@ describe('Elasticsearch - Ensure index', () => {
     elasticsearch.ensureDeleteIndex(testIndex)
       .then(() => done())
       .catch(done);
+  });
+
+  it('should throw InvalidArgumentError if mappings are not valid', () => {
+
+    return expect(elasticsearch.ensureIndex(testIndex, indexSettings, 123))
+      .to.be.rejectedWith(errors.InvalidArgumentError);
+  });
+
+  it('should throw InvalidArgumentError if settings are not valid', () => {
+
+    return expect(elasticsearch.ensureIndex(testIndex, 123, mappings))
+      .to.be.rejectedWith(errors.InvalidArgumentError);
+  });
+
+  it('should throw InvalidArgumentError if index name is not valid', () => {
+
+    return expect(elasticsearch.ensureIndex(123, indexSettings, mappings))
+      .to.be.rejectedWith(errors.InvalidArgumentError);
   });
 
   it('should create an index if it does not exist', () => {
@@ -734,6 +753,77 @@ describe('Elasticsearch - Search', () => {
         expect(hit._id).to.equal(id);
         expect(hit._type).to.equal(type);
         expect(hit._source).to.deep.equal(doc);
+      });
+  });
+
+  after((done) => {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(() => done())
+      .catch(done);
+  });
+});
+
+/**
+ * Bulk index
+ *
+ *
+ */
+
+describe('Elasticsearch - Bulk index', () => {
+
+  const testIndex = 'mongoolastic-test-search';
+  const doc = {name: 'Bob', hobby: 'Mooo'};
+  const id = '1234567890';
+  const type = 'Cat';
+
+  const mappings = {
+    'Cat': {
+      properties: {
+        name: {
+          type: 'string'
+        }
+      }
+    }
+  };
+
+  const query = {
+    'index': testIndex,
+    'query_string': {
+      'query': 'Bob'
+    }
+  };
+
+  before((done) => {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(() => {
+        elasticsearch.ensureIndex(testIndex, indexSettings, mappings)
+          .then(() => {
+            elasticsearch.indexDoc(id, doc, type, testIndex)
+              .then(() => done());
+          });
+      })
+      .catch(done);
+  });
+
+  it('should add documents to buffer and flush if buffer is full', () => {
+
+    const docs = [];
+
+    for (let i = 0; i < 110; i++) {
+      docs.push(doc);
+    }
+
+    return Bluebird.resolve(docs)
+      .map((doc) => {
+
+        return elasticsearch.bulkIndexDoc(id, doc, type, testIndex);
+      })
+      .then(() => {
+        return expect(elasticsearch.search(query))
+          .to.eventually.be.fulfilled
+          .then(() => {});
       });
   });
 

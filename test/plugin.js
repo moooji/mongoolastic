@@ -293,12 +293,6 @@ describe('Plugin - Connect', function() {
       .catch(done);
   });
 
-  it('should throw InvalidArgumentError if host is not valid', () => {
-
-    return expect(plugin.connect(123, testIndex))
-      .to.be.rejectedWith(errors.InvalidArgumentError);
-  });
-
   it('should throw InvalidArgumentError if index is not valid', () => {
 
     return expect(plugin.connect(host, 123))
@@ -593,3 +587,36 @@ describe('Plugin - Remove document', () => {
     });
   });
 });
+
+/**
+ * Sync model documents
+ *
+ *
+ */
+
+describe('Plugin - Sync', function() {
+
+  before((done) => {
+
+    elasticsearch.ensureDeleteIndex(testIndex)
+      .then(() => done())
+      .catch(done);
+  });
+
+  it('should throw InvalidArgumentError if model is invalid', () => {
+
+    return expect(plugin.sync(123))
+      .to.be.rejectedWith(errors.InvalidArgumentError);
+  });
+
+  /*
+  it('should sync all documents of a model', (done) => {
+
+    return expect(plugin.sync(CatModel))
+      .to.be.eventually.fulfilled
+      .then(done)
+      .catch(done);
+  });
+  */
+});
+
