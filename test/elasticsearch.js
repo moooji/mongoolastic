@@ -7,7 +7,7 @@ const chaiAsPromised = require('chai-as-promised');
 const elasticsearch = require('../lib/elasticsearch');
 const errors = require('../lib/errors');
 
-const client = elasticsearch.create({bulkSize: 10, bulkTimeout: 50});
+const client = elasticsearch.create({bulkSize: 10, bulkTimeout: 50, bulkBufferSize: 20});
 
 const expect = chai.expect;
 chai.use(chaiAsPromised);
@@ -101,14 +101,29 @@ describe('Elasticsearch - Create', () => {
 
   it('should throw InvalidArgumentError if bulkSize option is invalid', () => {
 
-    return expect(() => elasticsearch.create({bulkSize: 'abc', bulkTimeout: 123}))
-      .to.throw(errors.InvalidArgumentError);
+    return expect(() => elasticsearch.create({
+      bulkSize: 'abc',
+      bulkTimeout: 123,
+      bulkBufferSize: 100
+    })).to.throw(errors.InvalidArgumentError);
   });
 
   it('should throw InvalidArgumentError if bulkTimeout option is invalid', () => {
 
-    return expect(() => elasticsearch.create({bulkSize: 100, bulkTimeout: 'abc'}))
-      .to.throw(errors.InvalidArgumentError);
+    return expect(() => elasticsearch.create({
+      bulkSize: 123,
+      bulkTimeout: 'abc',
+      bulkBufferSize: 100
+    })).to.throw(errors.InvalidArgumentError);
+  });
+
+  it('should throw InvalidArgumentError if bulkBufferSize option is invalid', () => {
+
+    return expect(() => elasticsearch.create({
+      bulkSize: 100,
+      bulkTimeout: 100,
+      bulkBufferSize: 'abc'
+    })).to.throw(errors.InvalidArgumentError);
   });
 
   it('should create new client with options', () => {
@@ -811,7 +826,9 @@ describe('Elasticsearch - Search', () => {
  *
  */
 
-describe('Elasticsearch - Bulk index', () => {
+describe('Elasticsearch - Bulk index', function() {
+
+  this.timeout(5000);
 
   const testDelay = 1000;
   const testIndex = 'mongoolastic-test-search';
@@ -842,7 +859,7 @@ describe('Elasticsearch - Bulk index', () => {
 
     const docs = [];
 
-    for (let i = 0; i < 110; i++) {
+    for (let i = 0; i < 50; i++) {
       doc.id = 'abcdefg' + i.toString();
       docs.push(doc);
     }
@@ -872,3 +889,55 @@ describe('Elasticsearch - Bulk index', () => {
       .catch(done);
   });
 });
+
+/*
+describe('Elasticsearch - Bulk errors', () => {
+
+  const newClient = elasticsearch.create({bulkBufferSize: 1, bulkTimeout: 10000});
+  const testIndex = 'mongoolastic-test-search';
+  const doc = {id: 'abcdef123123', name: 'Bob', hobby: 'Mooo'};
+  const type = 'Cat';
+
+  const mappings = {
+    'Cat': {
+      properties: {
+        name: {
+          type: 'string'
+        }
+      }
+    }
+  };
+
+  before((done) => {
+
+    newClient.connect(host)
+      .then(() => {
+
+        newClient.ensureDeleteIndex(testIndex)
+          .then(() => {
+            return newClient.ensureIndex(testIndex, indexSettings, mappings);
+          })
+          .then(() => done())
+          .catch(done);
+      });
+  });
+
+  it('should throw BufferFullError when trying to add document to full buffer', () => {
+
+    return expect(newClient.indexDoc(doc.id, doc, type, testIndex, true))
+      .to.be.eventually.fulfilled
+      .then(() => {
+
+        return expect(newClient.indexDoc(doc.id, doc, type, testIndex, true))
+          .to.be.rejectedWith(errors.BufferOverflowError);
+      });
+  });
+
+  after((done) => {
+
+    newClient.ensureDeleteIndex(testIndex)
+      .then(() => done())
+      .catch(done);
+  });
+});
+*/
