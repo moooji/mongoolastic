@@ -554,7 +554,7 @@ describe('Elasticsearch - Index document', () => {
 
   it('should add a new document if it does not exist', () => {
 
-    return expect(client.indexDoc(id, doc, type, testIndex))
+    return expect(client.indexDoc(id, doc, type, testIndex, false))
       .to.eventually.be.fulfilled
       .then((res) => {
 
@@ -576,7 +576,7 @@ describe('Elasticsearch - Index document', () => {
 
   it('should update an existing document', () => {
 
-    return expect(client.indexDoc(id, docUpdated, type, testIndex))
+    return expect(client.indexDoc(id, docUpdated, type, testIndex, false))
       .to.eventually.be.fulfilled
       .then((res) => {
 
@@ -632,7 +632,7 @@ describe('Elasticsearch - Delete document', () => {
       .then(() => {
         client.ensureIndex(testIndex, indexSettings, mappings)
           .then(() => {
-            client.indexDoc(id, doc, type, testIndex)
+            client.indexDoc(id, doc, type, testIndex, false)
               .then(() => done());
           });
       })
@@ -701,7 +701,7 @@ describe('Elasticsearch - Get document', () => {
       .then(() => {
         client.ensureIndex(testIndex, indexSettings, mappings)
           .then(() => {
-            client.indexDoc(id, doc, type, testIndex)
+            client.indexDoc(id, doc, type, testIndex, false)
               .then(() => done());
           });
       })
@@ -773,7 +773,7 @@ describe('Elasticsearch - Search', () => {
       .then(() => {
         client.ensureIndex(testIndex, indexSettings, mappings)
           .then(() => {
-            client.indexDoc(id, doc, type, testIndex)
+            client.indexDoc(id, doc, type, testIndex, false)
               .then(() => done());
           });
       })
@@ -849,7 +849,7 @@ describe('Elasticsearch - Bulk index', () => {
 
     return Bluebird.resolve(docs)
       .map((doc) => {
-        return client.bulkIndexDoc(doc.id, doc, type, testIndex);
+        return client.indexDoc(doc.id, doc, type, testIndex, true);
       })
       .then(() => {
 

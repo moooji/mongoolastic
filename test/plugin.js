@@ -587,14 +587,13 @@ describe('Plugin - Sync', function() {
       .to.be.rejectedWith(errors.InvalidArgumentError);
   });
 
-  /*
-  it('should sync all documents of a model', (done) => {
+  it('should sync all documents of a model', () => {
 
     return expect(plugin.sync(CatModel))
       .to.be.eventually.fulfilled
-      .then(done)
-      .catch(done);
+      .then(() => {
+
+      });
   });
-  */
 });
 
