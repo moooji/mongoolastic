@@ -2,6 +2,7 @@
 
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
+const Bluebird = require('bluebird');
 const mongoose = require('mongoose');
 const elasticsearch = require('../lib/elasticsearch');
 const plugin = require('../lib/plugin');
@@ -574,7 +575,7 @@ describe('Plugin - Remove document', () => {
 
 describe('Plugin - Sync', function() {
 
-  this.timeout(30000);
+  this.timeout(20000);
 
   before((done) => {
 
@@ -591,17 +592,30 @@ describe('Plugin - Sync', function() {
 
   it('should sync all documents of a model', (done) => {
 
-    return expect(plugin.sync(CatModel))
-      .to.be.eventually.fulfilled
-      .then(() => {
+    CatModel.find({}, (err, docs) => {
 
-        setTimeout(() => {
+      if (err) {
+        return done(err);
+      }
 
-          // TODO: Check that all docs have been synced
-          done();
-        }, 20000);
-      })
-      .catch(done);
+      return expect(plugin.sync(CatModel))
+        .to.be.eventually.fulfilled
+        .then(() => {
+
+          setTimeout(() => {
+
+            Bluebird.resolve(docs)
+              .map((doc) => {
+                const type = doc.constructor.modelName;
+                return client.getDoc(doc.id, type, testIndex);
+              })
+              .then(() => done())
+              .catch(done);
+
+          }, 15000);
+        })
+        .catch(done);
+    });
   });
 });
 
