@@ -589,6 +589,34 @@ describe('Elasticsearch - Index document', () => {
       });
   });
 
+  it('should index a document with _id field', () => {
+
+    const id = '123';
+    const doc = {_id: id, name: 'Bob', hobby: 'Wooof'};
+
+    return expect(client.indexDoc(id, doc, type, testIndex, false))
+      .to.eventually.be.fulfilled
+      .then((res) => {
+
+        expect(res.created).to.deep.equal(true);
+
+        // Get the document and compare to source
+        return expect(client.getDoc(id, type, testIndex))
+          .to.eventually.be.fulfilled
+          .then((res) => {
+
+            expect(res.found).to.deep.equal(true);
+            expect(res._index).to.deep.equal(testIndex);
+            expect(res._type).to.deep.equal(type);
+            expect(res._id).to.deep.equal(id);
+
+            // Remove _id field for comparison
+            delete doc._id;
+            expect(res._source).to.deep.equal(doc);
+          });
+      });
+  });
+
   it('should update an existing document', () => {
 
     return expect(client.indexDoc(id, docUpdated, type, testIndex, false))

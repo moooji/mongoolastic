@@ -574,6 +574,8 @@ describe('Plugin - Remove document', () => {
 
 describe('Plugin - Sync', function() {
 
+  this.timeout(30000);
+
   before((done) => {
 
     client.ensureDeleteIndex(testIndex)
@@ -587,13 +589,19 @@ describe('Plugin - Sync', function() {
       .to.be.rejectedWith(errors.InvalidArgumentError);
   });
 
-  it('should sync all documents of a model', () => {
+  it('should sync all documents of a model', (done) => {
 
     return expect(plugin.sync(CatModel))
       .to.be.eventually.fulfilled
       .then(() => {
 
-      });
+        setTimeout(() => {
+
+          // TODO: Check that all docs have been synced
+          done();
+        }, 20000);
+      })
+      .catch(done);
   });
 });
 
