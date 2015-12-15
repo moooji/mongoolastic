@@ -10,9 +10,10 @@
   "repository": {
     "url": "https://github.com/moooji/mongoolastic"
   },
-  "version": "0.10.1",
+  "version": "0.10.25",
   "dependencies": {
     "bluebird": "^2.10.2",
+    "bluebird-retry": "^0.5.1",
     "custom-error-generator": "^7.0.0",
     "elasticsearch": "^8.2.0",
     "lodash": "^3.10.1"
@@ -21,7 +22,7 @@
     "chai": "^3.2.0",
     "chai-as-promised": "^5.1.0",
     "jscs": "^2.7.0",
-    "mocha": "*",
+    "mocha": "^2.3.2",
     "mocha-jscs": "^4.0.0",
     "mocha-jshint": ">=0.0.1",
     "mongoose": ">=0.0.1",
